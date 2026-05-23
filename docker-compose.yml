@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gpg_postgres
+    environment:
+      POSTGRES_USER: gpg
+      POSTGRES_PASSWORD: gpg123
+      POSTGRES_DB: gpg_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - gpg_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gpg -d gpg_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gpg_pgdata:

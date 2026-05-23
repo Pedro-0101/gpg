@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime? // Novo: data fim calculada/override
+  dailyHours  Int      @default(8)
+  status      String   @default("active")
+  
+  // Novos campos para suporte à identidade visual e KPIs
+  totalBudget Decimal?  @db.Decimal(12, 2)
+  client      String?
+  managerId   String?   // ID do TeamMember que atua como PM
+  color       String   @default("#4F46E5")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stages        Stage[]
+  teams         Team[]
+  stakeholders  Stakeholder[]
+  professionals Professional[]
+  members       TeamMember[]    // Relacionamento com novos membros nomeados
+  costs         CostEntry[]     // Lançamentos financeiros
+  risks         Risk[]          // Gestão de riscos
+  milestones    Milestone[]     // Marcos do projeto
+  decisions     Decision[]      // Registro de decisões
+}
+
+model Stage {
+  id        String    @id @default(cuid())
+  projectId String
+  name      String
+  order     Int
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  topics     Topic[]
+  costs      CostEntry[] // Custos podem ser associados a etapas
+  milestones Milestone[] // Marcos podem ser associados a etapas
+
+  @@unique([projectId, order])
+}
+
+model Topic {
+  id        String    @id @default(cuid())
+  stageId   String
+  name      String
+  order     Int
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  stage     Stage      @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  subtopics Subtopic[]
+
+  @@unique([stageId, order])
+}
+
+// Subtopic = task final (folha do WBS)
+model Subtopic {
+  id            String    @id @default(cuid())
+  topicId       String
+  name          String
+  description   String?
+  durationHours Int
+  isConcurrent  Boolean   @default(false)
+  order         Int       @default(1)
+  startDate     DateTime?
+  endDate       DateTime?
+  teamId        String?
+  status        String    @default("todo") // Alterado de "pending" para "todo" conforme design
+  progress      Int       @default(0)
+  
+  // Novos campos para detalhamento da tarefa
+  spentHours  Float    @default(0)
+  deadline    DateTime?
+  taskType    String   @default("task") // "task" | "milestone" | "deliverable"
+  priority    String   @default("med")  // "high" | "med" | "low"
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  topic       Topic                @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  team        Team?                @relation(fields: [teamId], references: [id])
+  assignments SubtopicAssignment[] // Atribuições individuais
+  comments    SubtopicComment[]    // Comentários na tarefa
+  attachments SubtopicAttachment[] // Anexos/Links
+}
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String               // "Lina Kerry"
+  initials    String   @db.VarChar(4)  // "LK"
+  role        String               // "Sr. Designer"
+  skills      String[] @default([]) // ["UX", "UI"]
+  avatarColor Int    @default(0)   // Índice para paleta de cores (0-7)
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignments SubtopicAssignment[]
+  costs       CostEntry[]
+  decisions   Decision[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SubtopicAssignment {
+  subtopicId   String
+  memberId     String
+  subtopic     Subtopic   @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  member       TeamMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  @@id([subtopicId, memberId])
+}
+
+model Professional {
+  id         String   @id @default(cuid())
+  projectId  String
+  role       String
+  hourlyCost Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teamMembers TeamProfessional[]
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  professionals TeamProfessional[]
+  subtopics     Subtopic[]
+}
+
+model TeamProfessional {
+  teamId         String
+  professionalId String
+  quantity       Int    @default(1)
+
+  team         Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, professionalId])
+}
+
+model Stakeholder {
+  id              String   @id @default(cuid())
+  projectId       String
+  name            String
+  role            String?
+  organization    String?
+  type            String   @default("external")
+  influence       Int      @default(3)
+  interest        Int      @default(3)
+  engagementLevel String   @default("neutral")
+  contactInfo     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model CostEntry {
+  id          String   @id @default(cuid())
+  projectId   String
+  stageId     String?
+  memberId    String?
+  description String
+  category    String   // "Pessoal" | "Ferramentas" | "Infraestrutura" | "Freelancers"
+  amount      Decimal  @db.Decimal(10, 2)
+  hours       Float?
+  date        DateTime @default(now())
+  
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage       Stage?     @relation(fields: [stageId], references: [id])
+  member      TeamMember? @relation(fields: [memberId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Risk {
+  id           String   @id @default(cuid())
+  projectId    String
+  title        String
+  description  String?
+  probability  String   @default("med") // "high" | "med" | "low"
+  impact       String   @default("med")
+  status       String   @default("active") // "active" | "resolved" | "accepted"
+  responsePlan String?
+  dueDate      DateTime?
+  
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Milestone {
+  id        String   @id @default(cuid())
+  projectId String
+  stageId   String?
+  name      String
+  date      DateTime
+  status    String   @default("pending") // "pending" | "reached" | "missed"
+  
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage     Stage?   @relation(fields: [stageId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Decision {
+  id          String   @id @default(cuid())
+  projectId   String
+  memberId    String?
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      String   @default("pending") // "pending" | "decided" | "cancelled"
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member      TeamMember? @relation(fields: [memberId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model SubtopicComment {
+  id         String   @id @default(cuid())
+  subtopicId String
+  authorName String
+  content    String
+  
+  subtopic   Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model SubtopicAttachment {
+  id         String   @id @default(cuid())
+  subtopicId String
+  name       String
+  size       Int
+  url        String
+  mimeType   String
+  isExternal Boolean  @default(false)
+  
+  subtopic   Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  uploadedAt DateTime @default(now())
+}
