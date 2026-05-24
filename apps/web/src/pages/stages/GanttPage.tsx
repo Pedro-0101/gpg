@@ -4,7 +4,7 @@ import { stagesApi } from '../../api/stages';
 import { milestonesApi, risksApi } from '../../api/risks-milestones';
 import type { Risk } from '../../types';
 import { formatDate } from '../../lib/utils';
-import { differenceInDays, addMonths, format } from 'date-fns';
+import { differenceInDays, addMonths, addDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PrioChip } from '../../components/ui/PrioChip';
 
@@ -12,18 +12,48 @@ interface GanttPageProps {
   project: any;
 }
 
-const COL_MONTHS = 6;
-const DAY_W = 3.5; // px per day
+type ViewMode = 'day' | 'week' | 'month' | 'quarter';
+
 const LABEL_W = 240;
 
-function getX(date: string | Date, origin: Date) {
-  return Math.max(0, differenceInDays(new Date(date), origin)) * DAY_W;
-}
-function getW(start: string | Date, end: string | Date) {
-  return Math.max(4, differenceInDays(new Date(end), new Date(start)) * DAY_W);
-}
+const viewConfigs = {
+  day: {
+    dayW: 48,
+    totalDays: 730, // 2 anos
+    colCount: 730,
+    getColumns: (origin: Date) => Array.from({ length: 730 }, (_, i) => addDays(origin, i)),
+    formatHeader: (d: Date) => format(d, 'dd/MM/yyyy'),
+  },
+  week: {
+    dayW: 10,
+    totalDays: 1092, // 156 semanas = 3 anos
+    colCount: 156,
+    getColumns: (origin: Date) => Array.from({ length: 156 }, (_, i) => addDays(origin, i * 7)),
+    formatHeader: (d: Date, idx: number) => `Sem. ${idx + 1} (${format(d, 'dd/MM/yy')})`,
+  },
+  month: {
+    dayW: 3.5,
+    totalDays: 1080, // 36 meses = 3 anos
+    colCount: 36,
+    getColumns: (origin: Date) => Array.from({ length: 36 }, (_, i) => addMonths(origin, i)),
+    formatHeader: (d: Date) => format(d, 'MMM yyyy', { locale: ptBR }),
+  },
+  quarter: {
+    dayW: 1.5,
+    totalDays: 1440, // 16 trimestres = 4 anos
+    colCount: 16,
+    getColumns: (origin: Date) => Array.from({ length: 16 }, (_, i) => addMonths(origin, i * 3)),
+    formatHeader: (d: Date) => {
+      const q = Math.floor(d.getMonth() / 3) + 1;
+      return `T${q}/${format(d, 'yyyy')}`;
+    },
+  },
+};
 
 export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
+  const [viewMode, setViewMode] = React.useState<ViewMode>('month');
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
   const { data: stages = [] } = useQuery({
     queryKey: ['stages', project.id],
     queryFn: () => stagesApi.list(project.id),
@@ -37,11 +67,33 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
     queryFn: () => risksApi.list(project.id),
   });
 
-  const origin = project.startDate ? new Date(project.startDate) : new Date();
-  const months = Array.from({ length: COL_MONTHS }, (_, i) => addMonths(origin, i));
-  const totalDays = COL_MONTHS * 30;
-  const totalW = totalDays * DAY_W;
-  const todayX = getX(new Date(), origin);
+  const config = viewConfigs[viewMode];
+  
+  // A origem sempre começa no dia 1 de janeiro do ano anterior ao início do projeto
+  const origin = React.useMemo(() => {
+    const projectStart = project.startDate ? new Date(project.startDate) : new Date();
+    const projectYear = projectStart.getFullYear();
+    return new Date(projectYear - 1, 0, 1);
+  }, [project.startDate]);
+
+  const columns = React.useMemo(() => config.getColumns(origin), [config, origin]);
+  const totalW = config.totalDays * config.dayW;
+  const todayX = Math.max(0, differenceInDays(new Date(), origin)) * config.dayW;
+
+  const getX = (date: string | Date, _origin?: Date) => {
+    return Math.max(0, differenceInDays(new Date(date), origin)) * config.dayW;
+  };
+  const getW = (start: string | Date, end: string | Date) => {
+    return Math.max(4, differenceInDays(new Date(end), new Date(start)) * config.dayW);
+  };
+
+  // Efeito para auto-scroll inteligente para a data atual
+  React.useEffect(() => {
+    if (scrollContainerRef.current) {
+      const scrollTarget = todayX > 0 ? todayX - 100 : 0;
+      scrollContainerRef.current.scrollLeft = scrollTarget;
+    }
+  }, [viewMode, todayX]);
 
   const activeRisks = (risks as Risk[]).filter((r) => r.status === 'active');
 
@@ -56,9 +108,30 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
           <div className="page-sub">Visualização por Etapa → Tópico · swimlanes</div>
         </div>
         <div className="seg">
-          <button className="seg-btn active">Mês</button>
-          <button className="seg-btn">Semana</button>
-          <button className="seg-btn">Trimestre</button>
+          <button
+            className={`seg-btn ${viewMode === 'day' ? 'active' : ''}`}
+            onClick={() => setViewMode('day')}
+          >
+            Dia
+          </button>
+          <button
+            className={`seg-btn ${viewMode === 'week' ? 'active' : ''}`}
+            onClick={() => setViewMode('week')}
+          >
+            Semana
+          </button>
+          <button
+            className={`seg-btn ${viewMode === 'month' ? 'active' : ''}`}
+            onClick={() => setViewMode('month')}
+          >
+            Mês
+          </button>
+          <button
+            className={`seg-btn ${viewMode === 'quarter' ? 'active' : ''}`}
+            onClick={() => setViewMode('quarter')}
+          >
+            Trimestre
+          </button>
         </div>
       </div>
 
@@ -72,7 +145,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
             <span><span style={{ display: 'inline-block', width: 12, height: 8, background: 'var(--success)', borderRadius: 2, marginRight: 4 }} />Concluído</span>
           </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div ref={scrollContainerRef} style={{ overflowX: 'auto' }}>
           <div className="gantt-wrap" style={{ minWidth: LABEL_W + totalW }}>
             {/* Single today marker spanning full chart height */}
             {todayX > 0 && todayX < totalW && (
@@ -81,9 +154,9 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
             {/* Header row */}
             <div className="gantt-head">
               <div className="cell">Etapas e tópicos</div>
-              <div className="timeline-cols" style={{ gridTemplateColumns: `repeat(${COL_MONTHS}, ${totalW / COL_MONTHS}px)` }}>
-                {months.map((m, i) => (
-                  <span key={i}>{format(m, 'MMM yyyy', { locale: ptBR })}</span>
+              <div className="timeline-cols" style={{ gridTemplateColumns: `repeat(${config.colCount}, ${totalW / config.colCount}px)` }}>
+                {columns.map((c, i) => (
+                  <span key={i}>{config.formatHeader(c, i)}</span>
                 ))}
               </div>
             </div>
@@ -112,7 +185,13 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                         {stage.topics?.reduce((n: number, t: any) => n + (t.subtopics?.length ?? 0), 0) || 0} tarefas
                       </span>
                     </div>
-                    <div className="timeline-cell" style={{ position: 'relative' }}>
+                    <div
+                      className="timeline-cell"
+                      style={{
+                        position: 'relative',
+                        backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)`,
+                      }}
+                    >
                       {hasBar && (
                         <div
                           className="gantt-bar stage-bar"
@@ -139,7 +218,13 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                             {topic.subtopics?.length || 0}
                           </span>
                         </div>
-                        <div className="timeline-cell" style={{ position: 'relative' }}>
+                        <div
+                          className="timeline-cell"
+                          style={{
+                            position: 'relative',
+                            backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)`,
+                          }}
+                        >
                           {topicHasBar && (
                             <div
                               className="gantt-bar accent-bar"
