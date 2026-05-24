@@ -5,7 +5,10 @@ import { PageHead } from '../../components/ui/PageHead';
 import { TabBar } from '../../components/ui/TabBar';
 import { ProjectOverviewPage } from './ProjectOverviewPage';
 import { StagesPage } from '../stages/StagesPage';
-import { TeamsPage } from '../teams/TeamsPage';
+import { GanttPage } from '../stages/GanttPage';
+import { MembersPage } from '../members/MembersPage';
+import { CostsPage } from '../costs/CostsPage';
+import { ReportsPage } from './ReportsPage';
 import { StakeholdersPage } from '../stakeholders/StakeholdersPage';
 import { ProfessionalsPage } from '../professionals/ProfessionalsPage';
 import { Plus, MoreVertical } from 'lucide-react';
@@ -47,7 +50,10 @@ export function ProjectDetailPage() {
         <Routes>
           <Route index element={<ProjectOverviewPage project={project} />} />
           <Route path="stages/*" element={<StagesPage project={project} />} />
-          <Route path="team" element={<TeamsPage project={project} />} />
+          <Route path="gantt" element={<GanttPage project={project} />} />
+          <Route path="team" element={<MembersPage project={project} />} />
+          <Route path="costs" element={<CostsPage project={project} />} />
+          <Route path="reports" element={<ReportsPage project={project} />} />
           <Route path="stakeholders" element={<StakeholdersPage project={project} />} />
           <Route path="*" element={<Navigate to="" replace />} />
         </Routes>

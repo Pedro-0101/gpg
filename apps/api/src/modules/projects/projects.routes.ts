@@ -5,6 +5,9 @@ import { teamsRouter } from '../teams/teams.routes';
 import { stakeholdersRouter } from '../stakeholders/stakeholders.routes';
 import { professionalsRouter } from '../professionals/professionals.routes';
 import membersRouter from '../members/members.routes';
+import costsRouter from '../costs/costs.routes';
+import risksRouter from '../risks/risks.routes';
+import milestonesRouter from '../milestones/milestones.routes';
 
 export const projectsRouter = Router();
 
@@ -21,3 +24,6 @@ projectsRouter.use('/:projectId/teams', teamsRouter);
 projectsRouter.use('/:projectId/stakeholders', stakeholdersRouter);
 projectsRouter.use('/:projectId/professionals', professionalsRouter);
 projectsRouter.use('/:projectId/members', membersRouter);
+projectsRouter.use('/:projectId/costs', costsRouter);
+projectsRouter.use('/:projectId/risks', risksRouter);
+projectsRouter.use('/:projectId/milestones', milestonesRouter);

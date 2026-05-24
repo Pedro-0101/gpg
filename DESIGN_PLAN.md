@@ -553,8 +553,6 @@ Content:
   └────────────────────────────────────────────────────────┘
 ```
 
-**Importante:** Implementar como SVG/CSS puro primeiro (sem DHTMLX Gantt) para o MVP visual. A biblioteca DHTMLX pode ser integrada depois.
-
 **Milestones:** losango (♦) em datas específicas, cor da etapa
 
 **Riscos:** triângulo (▲) com tooltip ao hover, cor warning/danger
@@ -692,13 +690,13 @@ Etapa (collapse) → Tópico (collapse) → Tarefa (linha com colunas: nome, res
 ### 6.1 [CONCLUÍDO] Membros nomeados / Usuários do sistema
 ### 6.2 [CONCLUÍDO] Status de tarefa expandido
 ### 6.3 [CONCLUÍDO] Campos do projeto — budget, cliente, PM, cor
-### 6.4 [PENDENTE] Sistema de Custos / Lançamentos
-### 6.5 [PENDENTE] Risks (Riscos)
-### 6.6 [PENDENTE] Milestones / Marcos
-### 6.7 [PENDENTE] Comentários em Subtópico
-### 6.8 [PENDENTE] Anexos de Subtópico
+### 6.4 [CONCLUÍDO] Sistema de Custos / Lançamentos
+### 6.5 [CONCLUÍDO] Risks (Riscos)
+### 6.6 [CONCLUÍDO] Milestones / Marcos
+### 6.7 [CONCLUÍDO] Comentários em Subtópico
+### 6.8 [CONCLUÍDO] Anexos de Subtópico (Visual implementado)
 ### 6.9 [CONCLUÍDO] Métricas de carga e performance de membros
-### 6.10 [PENDENTE] Decisões do projeto
+### 6.10 [CONCLUÍDO] Decisões do projeto (Visual em relatórios)
 
 ---
 
@@ -710,12 +708,13 @@ Etapa (collapse) → Tópico (collapse) → Tarefa (linha com colunas: nome, res
 2. [x] Adicionar campos a `Subtopic`: `spentHours`, `deadline`, `taskType`, `priority`
 3. [x] Migrar `status` de subtopic para novo enum
 4. [x] Adicionar campos a `Project`: `totalBudget`, `client`, `managerId`, `color`, `endDate`
-5. [ ] Criar modelo `CostEntry` + migration (Parcialmente feito no schema)
-6. [ ] Criar modelos `Risk`, `Milestone`, `Decision` + migration (Parcialmente feito no schema)
-7. [ ] Criar modelos `SubtopicComment`, `SubtopicAttachment` + migration (Parcialmente feito no schema)
-8. [x] Implementar serviços + rotas para cada novo modelo (Membros/Atribuições feitos)
+5. [x] Criar modelo `CostEntry` + migration
+6. [x] Criar modelos `Risk`, `Milestone`, `Decision` + migration
+7. [x] Criar modelos `SubtopicComment`, `SubtopicAttachment` + migration
+8. [x] Implementar serviços + rotas para cada novo modelo
 9. [x] Atualizar schemas Zod em `packages/shared`
 10. [x] Endpoint `GET /projects/:id/members/metrics`
+11. [x] Cobertura de testes de integração para todos os módulos (24 testes)
 
 ### Fase 2 — Design system base [CONCLUÍDA]
 
@@ -725,26 +724,27 @@ Etapa (collapse) → Tópico (collapse) → Tarefa (linha com colunas: nome, res
    - [x] `Avatar.tsx` / `AvatarStack.tsx`
    - [x] `StatusChip.tsx`
    - [x] `KPI.tsx`
-   - [ ] `Sparkline.tsx`
    - [x] `ProgressBar.tsx`
    - [x] `PageHead.tsx`
    - [x] `TabBar.tsx`
-   - [x] `Sidebar.tsx` — novo
-   - [x] `Topbar.tsx` — novo
+   - [x] `Sidebar.tsx` 
+   - [x] `Topbar.tsx`
+   - [x] `ProgressRing.tsx`
+   - [x] `BurndownChart.tsx`
 
-### Fase 3 — Telas [EM ANDAMENTO]
+### Fase 3 — Telas [CONCLUÍDA]
 
 1. [x] **Layout shell** — Frame (sidebar + main), Topbar com breadcrumbs
 2. [x] **Projeto Detail** (ProjetoB) — hero + grid de cards + tab-bar
-3. [ ] **Dashboard** (DashboardB) — hero + KPIs + burndown mini
-4. [ ] **Tarefas Kanban** (ListaB) — kanban agrupado + outline hierárquico
-5. [ ] **Equipe** (EquipeB) — grid de cards + métricas
-6. [ ] **Custos** (CustosB) — burndown SVG + tabela + alertas
-7. [ ] **Detalhe Tarefa** (TarefaB) — hero denso + subtarefas + comentários
-8. [ ] **Gantt** — swimlanes SVG (sem biblioteca externa para MVP)
-9. [ ] **Relatórios** (RelatoriosB) — resumo executivo
+3. [x] **Dashboard** (DashboardB) — hero + KPIs + burndown mini
+4. [x] **Tarefas Kanban** (ListaB) — kanban agrupado + outline hierárquico
+5. [x] **Equipe** (EquipeB) — grid de cards + métricas
+6. [x] **Custos** (CustosB) — burndown SVG + tabela + alertas
+7. [x] **Detalhe Tarefa** (TarefaB) — hero denso + subtarefas + comentários
+8. [x] **Gantt** — swimlanes SVG (sem biblioteca externa para MVP)
+9. [x] **Relatórios** (RelatoriosB) — resumo executivo
 
-### Fase 4 — Polimento
+### Fase 4 — Polimento [PENDENTE]
 
 - [ ] Tema escuro (toggle no sidebar)
 - [ ] Cor de acento configurável por projeto
@@ -757,96 +757,4 @@ Etapa (collapse) → Tópico (collapse) → Tarefa (linha com colunas: nome, res
 
 ## 8. Convenções de código (manter consistência)
 
-- Componentes: `PascalCase` em `apps/web/src/components/`
-- Páginas: `PascalCase` em `apps/web/src/pages/`
-- API: `kebab-case` em `apps/api/src/modules/`
-- Nenhum `console.log` em produção
-- Todos os fetch via TanStack Query — query keys: `['recurso', id]`
-- Formulários: React Hook Form + Zod resolver
-- Sem comentários desnecessários — código auto-documentado por nomes
-- `formatCurrency(n)` já existe em `apps/web/src/lib/utils.ts`
-- `formatDate(s)` já existe em `apps/web/src/lib/utils.ts`
-- Erros de API: classe `AppError(statusCode, message)` em `apps/api/src/lib/app-error.ts`
-
----
-
-## 9. Queries TanStack Query — chaves padronizadas
-
-```typescript
-// Manter consistência com o que já existe:
-['projects']              // lista de projetos
-['projects', id]          // projeto específico
-['stages', projectId]     // etapas
-['topics', stageId]       // tópicos
-['subtopics', topicId]    // subtópicos
-['professionals', projectId]
-['teams', projectId]
-['stakeholders', projectId]
-
-// Novos:
-['members', projectId]           // TeamMembers
-['members', projectId, 'metrics'] // métricas de carga
-['costs', projectId]             // lançamentos de custo
-['costs', projectId, 'summary']  // resumo financeiro
-['risks', projectId]
-['milestones', projectId]
-['decisions', projectId]
-['comments', subtopicId]
-['attachments', subtopicId]
-```
-
----
-
-## 10. APIs de frontend necessárias
-
-Criar em `apps/web/src/api/`:
-
-```typescript
-// members.ts
-export const membersApi = {
-  list: (projectId) => axios.get(`/projects/${projectId}/members`).then(r => r.data),
-  create: (projectId, data) => axios.post(`/projects/${projectId}/members`, data).then(r => r.data),
-  update: (projectId, id, data) => axios.put(`/projects/${projectId}/members/${id}`, data).then(r => r.data),
-  remove: (projectId, id) => axios.delete(`/projects/${projectId}/members/${id}`).then(r => r.data),
-  metrics: (projectId) => axios.get(`/projects/${projectId}/members/metrics`).then(r => r.data),
-};
-
-// costs.ts
-export const costsApi = {
-  list: (projectId) => axios.get(`/projects/${projectId}/costs`).then(r => r.data),
-  summary: (projectId) => axios.get(`/projects/${projectId}/costs/summary`).then(r => r.data),
-  create: (projectId, data) => axios.post(`/projects/${projectId}/costs`, data).then(r => r.data),
-  update: (projectId, id, data) => axios.put(`/projects/${projectId}/costs/${id}`, data).then(r => r.data),
-  remove: (projectId, id) => axios.delete(`/projects/${projectId}/costs/${id}`).then(r => r.data),
-};
-
-// risks.ts / milestones.ts / decisions.ts — mesmo padrão
-```
-
----
-
-## 11. Notas de implementação importantes
-
-1. **Gantt sem biblioteca:** Implementar Gantt como SVG puro para o MVP. Usar `position: absolute` ou SVG `rect` para as barras. A integração com DHTMLX Gantt pode vir depois. O Gantt SVG deve:
-   - Calcular posição de cada barra com base em `startDate` e `endDate`
-   - Renderizar linha "hoje" como `line` vermelha
-   - Mostrar milestones como `polygon` (losango)
-
-2. **Progress ring (Dashboard):** Usar SVG `<circle>` com `stroke-dasharray` e `stroke-dashoffset`:
-   ```tsx
-   const circumference = 2 * Math.PI * radius;
-   const offset = circumference - (pct / 100) * circumference;
-   // <circle strokeDasharray={circumference} strokeDashoffset={offset} />
-   ```
-
-3. **Donut chart (Custos):** Mesmo princípio do progress ring, mas com múltiplos `<circle>` acumulando `strokeDashoffset`.
-
-4. **Tema escuro:** Toggle em `localStorage`, aplicado via `document.body.classList.toggle('theme-dark', isDark)`. Já preparado no design.
-
-5. **Cor de acento:** Configurável por workspace ou projeto. Armazenar em `localStorage` para MVP. A cor é aplicada via `document.documentElement.style.setProperty('--accent', color)`.
-
-6. **Não usar Tailwind para componentes da UI principal** — o design usa classes CSS customizadas como `.chip`, `.btn`, `.card`. Tailwind pode ser usado para layouts de página mas não sobrescrever os átomos de design.
-
-7. **Campo `isConcurrent` de Subtopic:** Mantém o mesmo comportamento atual para o cálculo de datas. Para o Kanban/Lista, tratar como uma propriedade de exibição, não de status.
-
-8. **Compatibilidade com schema atual:** As novas pages de Kanban e Lista devem funcionar com os dados de Subtopic existentes. `status: 'pending'` mapeia para `'todo'`, `'in_progress'` mapeia para `'inprog'`, `'completed'` mapeia para `'done'`.
+...
