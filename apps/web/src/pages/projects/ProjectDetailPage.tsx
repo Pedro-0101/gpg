@@ -7,7 +7,6 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { ProjectOverviewPage } from './ProjectOverviewPage';
 import { StagesPage } from '../stages/StagesPage';
 import { GanttPage } from '../stages/GanttPage';
-import { MembersPage } from '../members/MembersPage';
 import { CostsPage } from '../costs/CostsPage';
 import { ReportsPage } from './ReportsPage';
 import { StakeholdersPage } from '../stakeholders/StakeholdersPage';
@@ -31,7 +30,6 @@ export function ProjectDetailPage() {
     { to: '', label: 'Visão Geral', end: true },
     { to: 'stages', label: 'Tarefas' },
     { to: 'gantt', label: 'Gantt' },
-    { to: 'team', label: 'Membros' },
     { to: 'teams', label: 'Equipes' },
     { to: 'costs', label: 'Custos' },
     { to: 'stakeholders', label: 'Stakeholders' },
@@ -55,7 +53,6 @@ export function ProjectDetailPage() {
           <Route index element={<ProjectOverviewPage project={project} />} />
           <Route path="stages/*" element={<StagesPage project={project} />} />
           <Route path="gantt" element={<GanttPage project={project} />} />
-          <Route path="team" element={<MembersPage project={project} />} />
           <Route path="teams" element={<TeamsPage project={project} />} />
           <Route path="costs" element={<CostsPage project={project} />} />
           <Route path="reports" element={<ReportsPage project={project} />} />
