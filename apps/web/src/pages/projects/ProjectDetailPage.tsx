@@ -32,6 +32,7 @@ export function ProjectDetailPage() {
     { to: 'team', label: 'Equipe' },
     { to: 'costs', label: 'Custos' },
     { to: 'stakeholders', label: 'Stakeholders' },
+    { to: 'reports', label: 'Relatórios' },
   ];
 
   return (

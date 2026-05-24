@@ -1,79 +1,89 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { projectsApi } from '../../api/projects';
+import { membersApi } from '../../api/members';
 import { KPI } from '../../components/ui/KPI';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { ProgressRing } from '../../components/ui/ProgressRing';
-import { Avatar, AvatarStack } from '../../components/ui/Avatar';
+import { Avatar } from '../../components/ui/Avatar';
 import { StatusChip } from '../../components/ui/StatusChip';
 import { formatCurrency, formatDate } from '../../lib/utils';
-import { AlertCircle, Clock, CheckCircle2, TrendingUp, ArrowRight, Plus } from 'lucide-react';
+import { AlertCircle, Clock, CheckCircle2, ArrowRight, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import type { Project } from '../../types';
 
 export const DashboardPage: React.FC = () => {
-  const { data: projects = [], isLoading } = useQuery({
+  const { data: projects = [], isLoading } = useQuery<Project[]>({
     queryKey: ['projects'],
-    queryFn: projectsApi.list
+    queryFn: projectsApi.list,
+  });
+
+  const mainProject = projects[0];
+
+  const { data: mainProjectMembers = [] } = useQuery({
+    queryKey: ['members', mainProject?.id],
+    queryFn: () => membersApi.list(mainProject!.id),
+    enabled: !!mainProject?.id,
   });
 
   if (isLoading) return <div className="muted p-8 text-center">Carregando painel executivo...</div>;
 
-  const mainProject = projects[0]; // Pegar o primeiro como destaque para o Hero
-  const totalBudget = projects.reduce((acc: number, p: any) => acc + (Number(p.totalBudget) || 0), 0);
-  const activeMembers = 24; // Mock consolidado
+  const totalBudget = projects.reduce((acc, p) => acc + (Number(p.totalBudget) || 0), 0);
+  const activeProjects = projects.filter((p) => p.status === 'active').length;
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Hero: Main Project Overview */}
+      {/* Hero */}
       {mainProject && (
-        <section className="card p-8 bg-gradient-to-br from-white to-surface-2 overflow-hidden relative border-l-8" style={{ borderLeftColor: mainProject.color }}>
-           <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-2 max-w-xl">
-                 <div className="row gap-2">
-                    <span className="chip accent">PROJETO DESTAQUE</span>
-                    <span className="chip outline xs mono">#{mainProject.id.slice(-4)}</span>
-                 </div>
-                 <h1 className="text-3xl font-bold tracking-tight">{mainProject.name}</h1>
-                 <p className="text-muted text-lg leading-relaxed">
-                    {mainProject.description || 'Gestão estratégica em andamento. Foco na entrega dos marcos críticos desta semana.'}
-                 </p>
-                 <div className="row gap-6 mt-4">
-                    <div className="col">
-                       <span className="xs muted font-bold uppercase">Cliente</span>
-                       <span className="b">{mainProject.client || 'Acme Studio'}</span>
-                    </div>
-                    <div className="col">
-                       <span className="xs muted font-bold uppercase">Budget Alocado</span>
-                       <span className="b">{formatCurrency(mainProject.totalBudget || 0)}</span>
-                    </div>
-                    <div className="col">
-                       <span className="xs muted font-bold uppercase">Responsável</span>
-                       <div className="row gap-2">
-                          <Avatar initials="JD" colorIndex={2} size="sm" />
-                          <span className="b small">John Doe</span>
-                       </div>
-                    </div>
-                 </div>
-                 <div className="mt-6">
-                    <Link to={`/projects/${mainProject.id}`} className="btn primary">
-                       Ir para Projeto <ArrowRight size={14} className="ml-1" />
-                    </Link>
-                 </div>
+        <section
+          className="card p-8 overflow-hidden relative border-l-8"
+          style={{ borderLeftColor: mainProject.color || 'var(--accent)' }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 max-w-xl">
+              <div className="row gap-2">
+                <span className="chip accent">PROJETO DESTAQUE</span>
+                <span className="chip outline xs mono">#{mainProject.id.slice(-4)}</span>
               </div>
-
-              <div className="hidden lg:block pr-8">
-                 <ProgressRing progress={57} size={180} strokeWidth={15} />
+              <h1 className="text-3xl font-bold tracking-tight">{mainProject.name}</h1>
+              <p className="text-muted text-lg leading-relaxed">
+                {mainProject.description || 'Gestão estratégica em andamento.'}
+              </p>
+              <div className="row gap-6 mt-4">
+                {mainProject.client && (
+                  <div className="col">
+                    <span className="xs muted font-bold uppercase">Cliente</span>
+                    <span className="b">{mainProject.client}</span>
+                  </div>
+                )}
+                <div className="col">
+                  <span className="xs muted font-bold uppercase">Budget Alocado</span>
+                  <span className="b">{formatCurrency(Number(mainProject.totalBudget) || 0)}</span>
+                </div>
+                <div className="col">
+                  <span className="xs muted font-bold uppercase">Equipe</span>
+                  <span className="b">{mainProjectMembers.length} pessoa(s)</span>
+                </div>
               </div>
-           </div>
+              <div className="mt-6">
+                <Link to={`/projects/${mainProject.id}`} className="btn primary">
+                  Ir para Projeto <ArrowRight size={14} className="ml-1" />
+                </Link>
+              </div>
+            </div>
+            <div className="hidden lg:block pr-8">
+              <ProgressRing progress={57} size={180} strokeWidth={15} />
+            </div>
+          </div>
         </section>
       )}
 
       {/* Global KPIs */}
       <div className="grid grid-cols-4 gap-4">
-         <KPI label="Projetos Ativos" value={projects.length} sub="3 em fase crítica" delta={{ value: '12%', trend: 'up' }} />
-         <KPI label="Budget Consolidado" value={formatCurrency(totalBudget)} sub="Valor total aprovado" />
-         <KPI label="Equipe Global" value={activeMembers} sub="Pessoas alocadas" />
-         <KPI label="Tasks Concluídas" value="142" sub="Últimos 30 dias" delta={{ value: '↑ 8%', trend: 'up' }} />
+        <KPI label="Projetos Ativos" value={activeProjects} sub={`de ${projects.length} total`} />
+        <KPI label="Budget Consolidado" value={formatCurrency(totalBudget)} sub="Valor total aprovado" />
+        <KPI label="Equipe no Projeto" value={mainProjectMembers.length} sub={mainProject?.name ?? '—'} />
+        <KPI label="Projetos" value={projects.length} sub="Cadastrados" />
       </div>
 
       <div className="grid grid-cols-3 gap-8">
