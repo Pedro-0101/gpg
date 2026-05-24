@@ -52,10 +52,10 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
   });
 
   const totalSpent = summary?.totalSpent ?? 0;
-  const taskCost = summary?.taskCost ?? 0;
-  const budget = Number(project.totalBudget) || 0;
-  const balance = budget - totalSpent;
-  const burnRate = budget > 0 ? (totalSpent / budget) * 100 : 0;
+  const plannedCost = summary?.plannedCost ?? 0;
+  const doneCost = summary?.doneCost ?? 0;
+  const balance = plannedCost > 0 ? plannedCost - doneCost : 0;
+  const burnRate = plannedCost > 0 ? (doneCost / plannedCost) * 100 : 0;
 
   // Burndown chart data
   const monthsMap: Record<string, number> = {};
@@ -68,7 +68,7 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
   let acc = 0;
   const chartData = [0, ...months.map((m) => { acc += monthsMap[m]; return acc; })];
   const totalMonths = Math.max(months.length, 1);
-  const idealStep = budget / totalMonths;
+  const idealStep = plannedCost / totalMonths;
   const idealData = Array.from({ length: chartData.length }, (_, i) => idealStep * i);
 
   return (
@@ -94,16 +94,14 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
       </div>
 
       <div className="kpi-grid">
-        <KPI label="Orçamento previsto" value={budget > 0 ? formatCurrency(budget) : '—'} sub="valor aprovado do projeto" />
-        <KPI label="Gastos registrados" value={formatCurrency(totalSpent)}
-          delta={budget > 0 ? { dir: burnRate > 80 ? 'down' : 'flat', text: `${Math.round(burnRate)}% do orçamento` } : undefined}
-          sub="lançamentos manuais" />
-        <KPI label="Custo calculado (tasks)" value={formatCurrency(taskCost)}
-          delta={budget > 0 && taskCost > budget ? { dir: 'down', text: 'Acima do orçamento' } : undefined}
-          sub="horas × custo/h das equipes" />
-        <KPI label="Saldo" value={budget > 0 ? formatCurrency(balance) : '—'}
-          delta={balance < 0 ? { dir: 'down', text: 'Deficit' } : balance < budget * 0.2 ? { dir: 'flat', text: 'Atenção' } : undefined}
-          sub={balance >= 0 ? 'disponível' : 'orçamento estourado'} />
+        <KPI label="Orçamento previsto" value={formatCurrency(plannedCost)} sub="total planejado pelas tasks" />
+        <KPI label="Gastos realizados" value={formatCurrency(doneCost)}
+          delta={plannedCost > 0 ? { dir: burnRate > 80 ? 'down' : 'flat', text: `${Math.round(burnRate)}% concluído` } : undefined}
+          sub="tasks com status concluído" />
+        <KPI label="Lançamentos manuais" value={formatCurrency(totalSpent)} sub="entradas avulsas de custo" />
+        <KPI label="Saldo restante" value={formatCurrency(balance)}
+          delta={balance < 0 ? { dir: 'down', text: 'Deficit' } : undefined}
+          sub={balance >= 0 ? 'a realizar' : 'acima do planejado'} />
       </div>
 
       {/* Form */}

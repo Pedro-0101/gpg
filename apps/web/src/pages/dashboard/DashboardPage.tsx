@@ -57,10 +57,10 @@ export const DashboardPage: React.FC = () => {
   const doneTasks = allSubtopics.filter((s: any) => s.status === 'done').length;
   const mainProgress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
-  const budget = Number(mainProject?.totalBudget) || 0;
+  const plannedCost = costsSummary?.plannedCost ?? 0;
+  const doneCost = costsSummary?.doneCost ?? 0;
   const totalSpent = costsSummary?.totalSpent ?? 0;
-  const taskCost = costsSummary?.taskCost ?? 0;
-  const burnRate = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
+  const burnRate = plannedCost > 0 ? Math.round((doneCost / plannedCost) * 100) : 0;
 
   const daysLeft = mainProject?.endDate
     ? differenceInCalendarDays(new Date(mainProject.endDate), new Date())
@@ -181,20 +181,19 @@ export const DashboardPage: React.FC = () => {
         />
         <KPI
           label="Orçamento previsto"
-          value={budget > 0 ? formatCurrency(budget) : '—'}
-          sub="valor aprovado"
+          value={formatCurrency(plannedCost)}
+          sub="total planejado pelas tasks"
         />
         <KPI
-          label="Gastos registrados"
+          label="Gastos realizados"
+          value={formatCurrency(doneCost)}
+          sub={plannedCost > 0 ? `${burnRate}% concluído` : 'tasks concluídas'}
+          delta={burnRate > 80 ? { dir: 'down', text: 'Atenção' } : burnRate > 50 ? { dir: 'flat', text: `${burnRate}%` } : undefined}
+        />
+        <KPI
+          label="Lançamentos manuais"
           value={formatCurrency(totalSpent)}
-          sub={budget > 0 ? `${burnRate}% do orçamento` : 'lançamentos'}
-          delta={burnRate > 80 ? { dir: 'down', text: 'Alto' } : burnRate > 50 ? { dir: 'flat', text: `${burnRate}%` } : undefined}
-        />
-        <KPI
-          label="Custo calculado (tasks)"
-          value={formatCurrency(taskCost)}
-          sub="horas × custo/h equipes"
-          delta={budget > 0 && taskCost > budget ? { dir: 'down', text: 'Acima orçamento' } : undefined}
+          sub="entradas avulsas de custo"
         />
         <KPI
           label="Equipe sobrecarregada"
@@ -343,16 +342,16 @@ export const DashboardPage: React.FC = () => {
           )}
 
           {/* Resumo financeiro */}
-          {mainProject && budget > 0 && (
+          {mainProject && plannedCost > 0 && (
             <div className="card">
               <div className="card-head">
                 <div className="card-title">Financeiro</div>
-                <Link to="/costs" className="btn sm ghost">Ver custos</Link>
+                <Link to={`/projects/${mainProject.id}/costs`} className="btn sm ghost">Ver custos</Link>
               </div>
               <div className="card-body">
                 <div className="row between" style={{ marginBottom: 8 }}>
-                  <span className="xs faint">Realizado</span>
-                  <span className="b mono">{formatCurrency(totalSpent)}</span>
+                  <span className="xs faint">Gastos realizados</span>
+                  <span className="b mono">{formatCurrency(doneCost)}</span>
                 </div>
                 <div className="bar thick" style={{ marginBottom: 8 }}>
                   <span style={{
@@ -361,12 +360,12 @@ export const DashboardPage: React.FC = () => {
                   }} />
                 </div>
                 <div className="row between">
-                  <span className="xs faint">Orçamento total</span>
-                  <span className="xs faint mono">{formatCurrency(budget)}</span>
+                  <span className="xs faint">Orçamento previsto</span>
+                  <span className="xs faint mono">{formatCurrency(plannedCost)}</span>
                 </div>
                 <div className="row between" style={{ marginTop: 12 }}>
-                  <span className="xs faint">Saldo estimado</span>
-                  <span className="b mono">{formatCurrency(budget - totalSpent)}</span>
+                  <span className="xs faint">Saldo restante</span>
+                  <span className="b mono">{formatCurrency(plannedCost - doneCost)}</span>
                 </div>
               </div>
             </div>

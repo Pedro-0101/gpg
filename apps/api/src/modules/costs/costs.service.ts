@@ -71,8 +71,10 @@ export async function getSummary(projectId: string) {
     return acc;
   }, {});
 
-  // Planned task cost: durationHours × sum of all team-professional hourlyCost per subtopic
-  let taskCost = 0;
+  // plannedCost: all subtopics — durationHours × sum of team professional hourlyCosts
+  // doneCost: only completed subtopics — represents actual spend from finished work
+  let plannedCost = 0;
+  let doneCost = 0;
   for (const stage of project?.stages ?? []) {
     for (const topic of stage.topics) {
       for (const sub of topic.subtopics) {
@@ -81,7 +83,9 @@ export async function getSummary(projectId: string) {
             return s2 + Number(tp.professional.hourlyCost ?? 0);
           }, 0);
         }, 0);
-        taskCost += sub.durationHours * costPerHour;
+        const subtopicCost = sub.durationHours * costPerHour;
+        plannedCost += subtopicCost;
+        if (sub.status === 'done') doneCost += subtopicCost;
       }
     }
   }
@@ -90,7 +94,7 @@ export async function getSummary(projectId: string) {
     totalSpent,
     byCategory,
     count: entries.length,
-    totalBudget: project ? (Number(project.totalBudget) || null) : null,
-    taskCost,
+    plannedCost,
+    doneCost,
   };
 }
