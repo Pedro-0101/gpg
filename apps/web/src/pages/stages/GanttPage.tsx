@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { stagesApi } from '../../api/stages';
 import { milestonesApi, risksApi } from '../../api/risks-milestones';
+import type { Risk } from '../../types';
 import { formatDate } from '../../lib/utils';
 import { differenceInDays, startOfMonth, addMonths, format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -20,7 +21,12 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
 
   const { data: milestones = [] } = useQuery({
     queryKey: ['milestones', project.id],
-    queryFn: () => milestonesApi.list(project.id)
+    queryFn: () => milestonesApi.list(project.id),
+  });
+
+  const { data: risks = [] } = useQuery({
+    queryKey: ['risks', project.id],
+    queryFn: () => risksApi.list(project.id),
   });
 
   // Configurações do gráfico
@@ -159,16 +165,27 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
       {/* Risks / Legend */}
       <div className="grid grid-cols-3 gap-6">
          <Card className="col-span-2">
-            <CardHeader title="Riscos Detectados no Cronograma" />
+            <CardHeader title="Riscos do Projeto" subtitle={`${(risks as Risk[]).filter(r => r.status === 'active').length} ativos`} />
             <CardBody className="flex flex-col gap-3">
-               <div className="row gap-3 p-2 rounded bg-danger-soft">
-                  <AlertTriangle className="text-danger" size={18} />
-                  <div className="fill">
-                     <div className="small b text-danger">Atraso Crítico na Etapa 2</div>
-                     <div className="xs text-danger/80">O tópico "Design de UI" está 4 dias atrasado em relação ao milestone de aprovação.</div>
-                  </div>
-                  <button className="btn sm">Ver Tarefas</button>
-               </div>
+              {(risks as Risk[]).filter(r => r.status === 'active').length === 0 ? (
+                <div className="xs muted italic text-center py-4">Nenhum risco ativo cadastrado.</div>
+              ) : (
+                (risks as Risk[])
+                  .filter(r => r.status === 'active')
+                  .slice(0, 5)
+                  .map(r => (
+                    <div key={r.id} className="row gap-3 p-2 rounded bg-danger-soft">
+                      <AlertTriangle className="text-danger flex-shrink-0" size={18} />
+                      <div className="fill">
+                        <div className="small b text-danger">{r.title}</div>
+                        {r.description && <div className="xs text-danger/80">{r.description}</div>}
+                        <div className="xs muted mt-1">
+                          Probabilidade: <strong>{r.probability}</strong> · Impacto: <strong>{r.impact}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              )}
             </CardBody>
          </Card>
 
