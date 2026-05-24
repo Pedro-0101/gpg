@@ -73,7 +73,7 @@ const KanbanCard: React.FC<{ task: any, stageId: string, topicId: string }> = ({
   return (
     <div className="kanban-card">
       <div className="row between mb-1">
-         <span className="chip outline xs">{task.topicName || 'Tarefa'}</span>
+         <span className="chip outline xs">{task.taskType?.toUpperCase() || 'TASK'}</span>
          <span className={cn(
             'chip xs outline',
             task.priority === 'high' && 'blocked',

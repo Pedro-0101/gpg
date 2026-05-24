@@ -10,7 +10,15 @@ export async function findAll(projectId: string) {
     include: {
       topics: {
         orderBy: { order: 'asc' },
-        include: { subtopics: { orderBy: { order: 'asc' }, include: { team: true } } },
+        include: {
+            subtopics: {
+              orderBy: { order: 'asc' },
+              include: {
+                team: true,
+                assignments: { include: { member: true } },
+              },
+            },
+          },
       },
       _count: { select: { topics: true } },
     },

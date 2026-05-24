@@ -79,7 +79,11 @@ export async function unassignMember(subtopicId: string, memberId: string) {
 export async function update(id: string, topicId: string, data: UpdateSubtopicDto) {
   await findById(id, topicId);
   const projectId = await getProjectId(topicId);
-  const sub = await prisma.subtopic.update({ where: { id }, data });
+  const sub = await prisma.subtopic.update({
+    where: { id },
+    data,
+    include: { team: true, assignments: { include: { member: true } } },
+  });
   await recalculateSchedule(projectId);
   return sub;
 }

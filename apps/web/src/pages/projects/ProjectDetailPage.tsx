@@ -32,6 +32,7 @@ export function ProjectDetailPage() {
     { to: 'team', label: 'Equipe' },
     { to: 'costs', label: 'Custos' },
     { to: 'stakeholders', label: 'Stakeholders' },
+    { to: 'professionals', label: 'Profissionais' },
     { to: 'reports', label: 'Relatórios' },
   ];
 
@@ -56,6 +57,7 @@ export function ProjectDetailPage() {
           <Route path="costs" element={<CostsPage project={project} />} />
           <Route path="reports" element={<ReportsPage project={project} />} />
           <Route path="stakeholders" element={<StakeholdersPage project={project} />} />
+          <Route path="professionals" element={<ProfessionalsPage project={project} />} />
           <Route path="*" element={<Navigate to="" replace />} />
         </Routes>
       </div>
