@@ -8,6 +8,7 @@ import membersRouter from '../members/members.routes';
 import costsRouter from '../costs/costs.routes';
 import risksRouter from '../risks/risks.routes';
 import milestonesRouter from '../milestones/milestones.routes';
+import decisionsRouter from '../decisions/decisions.routes';
 
 export const projectsRouter = Router();
 
@@ -27,3 +28,4 @@ projectsRouter.use('/:projectId/members', membersRouter);
 projectsRouter.use('/:projectId/costs', costsRouter);
 projectsRouter.use('/:projectId/risks', risksRouter);
 projectsRouter.use('/:projectId/milestones', milestonesRouter);
+projectsRouter.use('/:projectId/decisions', decisionsRouter);

@@ -1,22 +1,21 @@
-import axios from 'axios';
+import { api } from '@/lib/api';
+import type { TeamMember, MemberMetrics } from '@/types';
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1',
-});
+const base = (projectId: string) => `/projects/${projectId}/members`;
 
 export const membersApi = {
-  list: (projectId: string) => 
-    api.get(`/projects/${projectId}/members`).then(r => r.data),
-  
-  metrics: (projectId: string) => 
-    api.get(`/projects/${projectId}/members/metrics`).then(r => r.data),
-  
-  create: (projectId: string, data: any) => 
-    api.post(`/projects/${projectId}/members`, data).then(r => r.data),
-  
-  update: (projectId: string, id: string, data: any) => 
-    api.put(`/projects/${projectId}/members/${id}`, data).then(r => r.data),
-  
-  remove: (projectId: string, id: string) => 
-    api.delete(`/projects/${projectId}/members/${id}`).then(r => r.data),
+  list: (projectId: string) =>
+    api.get<TeamMember[]>(base(projectId)).then((r) => r.data),
+
+  metrics: (projectId: string) =>
+    api.get<MemberMetrics[]>(`${base(projectId)}/metrics`).then((r) => r.data),
+
+  create: (projectId: string, data: Partial<TeamMember>) =>
+    api.post<TeamMember>(base(projectId), data).then((r) => r.data),
+
+  update: (projectId: string, id: string, data: Partial<TeamMember>) =>
+    api.patch<TeamMember>(`${base(projectId)}/${id}`, data).then((r) => r.data),
+
+  remove: (projectId: string, id: string) =>
+    api.delete(`${base(projectId)}/${id}`),
 };

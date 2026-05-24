@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as ctrl from './subtopics.controller';
 import commentsRouter from '../comments/comments.routes';
+import attachmentsRouter from '../attachments/attachments.routes';
 
 export const subtopicsRouter = Router({ mergeParams: true });
 
@@ -16,3 +17,6 @@ subtopicsRouter.delete('/:id/assignments/:memberId', ctrl.unassignMember);
 
 // Comments
 subtopicsRouter.use('/:subtopicId/comments', commentsRouter);
+
+// Attachments
+subtopicsRouter.use('/:subtopicId/attachments', attachmentsRouter);
