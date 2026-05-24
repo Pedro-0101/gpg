@@ -59,6 +59,7 @@ export const DashboardPage: React.FC = () => {
 
   const budget = Number(mainProject?.totalBudget) || 0;
   const totalSpent = costsSummary?.totalSpent ?? 0;
+  const taskCost = costsSummary?.taskCost ?? 0;
   const burnRate = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
 
   const daysLeft = mainProject?.endDate
@@ -179,10 +180,21 @@ export const DashboardPage: React.FC = () => {
           delta={mainProgress > 0 ? { dir: 'up', text: `+${mainProgress}%` } : undefined}
         />
         <KPI
-          label="Orçamento consumido"
-          value={budget > 0 ? `${burnRate}%` : '—'}
-          sub={budget > 0 ? `${formatCurrency(totalSpent)} de ${formatCurrency(budget)}` : 'Sem orçamento'}
-          delta={burnRate > 80 ? { dir: 'down', text: 'Atenção' } : burnRate > 50 ? { dir: 'flat', text: `${burnRate}%` } : undefined}
+          label="Orçamento previsto"
+          value={budget > 0 ? formatCurrency(budget) : '—'}
+          sub="valor aprovado"
+        />
+        <KPI
+          label="Gastos registrados"
+          value={formatCurrency(totalSpent)}
+          sub={budget > 0 ? `${burnRate}% do orçamento` : 'lançamentos'}
+          delta={burnRate > 80 ? { dir: 'down', text: 'Alto' } : burnRate > 50 ? { dir: 'flat', text: `${burnRate}%` } : undefined}
+        />
+        <KPI
+          label="Custo calculado (tasks)"
+          value={formatCurrency(taskCost)}
+          sub="horas × custo/h equipes"
+          delta={budget > 0 && taskCost > budget ? { dir: 'down', text: 'Acima orçamento' } : undefined}
         />
         <KPI
           label="Equipe sobrecarregada"

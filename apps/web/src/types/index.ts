@@ -123,6 +123,8 @@ export interface CostSummary {
   totalSpent: number;
   byCategory: Record<string, number>;
   count: number;
+  totalBudget: number | null;
+  taskCost: number;
 }
 
 export interface Risk {

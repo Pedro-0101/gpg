@@ -52,6 +52,7 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
   });
 
   const totalSpent = summary?.totalSpent ?? 0;
+  const taskCost = summary?.taskCost ?? 0;
   const budget = Number(project.totalBudget) || 0;
   const balance = budget - totalSpent;
   const burnRate = budget > 0 ? (totalSpent / budget) * 100 : 0;
@@ -93,14 +94,16 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
       </div>
 
       <div className="kpi-grid">
-        <KPI label="Orçamento total" value={formatCurrency(budget)} sub="aprovado" />
-        <KPI label="Realizado" value={formatCurrency(totalSpent)}
-          delta={budget > 0 ? { dir: burnRate > 80 ? 'down' : 'flat', text: `${Math.round(burnRate)}%` } : undefined}
-          sub="ritmo de consumo" />
-        <KPI label="Saldo estimado" value={formatCurrency(balance)}
-          delta={balance < 0 ? { dir: 'down', text: 'Negativo' } : undefined}
-          sub={balance >= 0 ? 'disponível' : 'deficit'} />
-        <KPI label="Lançamentos" value={String(entries.length)} sub={`${entries.length} registros`} />
+        <KPI label="Orçamento previsto" value={budget > 0 ? formatCurrency(budget) : '—'} sub="valor aprovado do projeto" />
+        <KPI label="Gastos registrados" value={formatCurrency(totalSpent)}
+          delta={budget > 0 ? { dir: burnRate > 80 ? 'down' : 'flat', text: `${Math.round(burnRate)}% do orçamento` } : undefined}
+          sub="lançamentos manuais" />
+        <KPI label="Custo calculado (tasks)" value={formatCurrency(taskCost)}
+          delta={budget > 0 && taskCost > budget ? { dir: 'down', text: 'Acima do orçamento' } : undefined}
+          sub="horas × custo/h das equipes" />
+        <KPI label="Saldo" value={budget > 0 ? formatCurrency(balance) : '—'}
+          delta={balance < 0 ? { dir: 'down', text: 'Deficit' } : balance < budget * 0.2 ? { dir: 'flat', text: 'Atenção' } : undefined}
+          sub={balance >= 0 ? 'disponível' : 'orçamento estourado'} />
       </div>
 
       {/* Form */}
