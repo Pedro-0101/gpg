@@ -19,6 +19,27 @@ export interface ImportResult {
   errors: string[];
 }
 
+// Greedy left-to-right match of slash-separated parts against known team names.
+// Returns an array of resolved team names, or null if the whole string can't be resolved.
+function resolveSlashTeams(parts: string[], teamById: Map<string, string>): string[] | null {
+  const result: string[] = [];
+  let i = 0;
+  while (i < parts.length) {
+    let matched = false;
+    for (let len = parts.length - i; len >= 1; len--) {
+      const candidate = parts.slice(i, i + len).join('/');
+      if (teamById.has(candidate.toLowerCase())) {
+        result.push(candidate);
+        i += len;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) return null; // can't resolve fully — treat whole string as one team name
+  }
+  return result.length > 1 ? result : null;
+}
+
 // Parse a CSV string into rows, handling quoted fields
 function parseCsvLine(line: string): string[] {
   const cols: string[] = [];
@@ -145,8 +166,24 @@ export async function importCsvRows(
       }
 
       // ── Resolve teams ───────────────────────────────────────────────
+      // Expand raw equipes: "+" is always a separator; "/" is a separator only
+      // when the whole string doesn't exist as a team but all slash-parts do.
+      const expandedTeamNames: string[] = [];
+      for (const raw of row.equipes) {
+        if (!teamById.has(raw.toLowerCase()) && raw.includes('/')) {
+          const parts = raw.split('/').map((p) => p.trim()).filter(Boolean);
+          // Greedy resolve: try to match longest known team from left
+          const resolved = resolveSlashTeams(parts, teamById);
+          if (resolved) {
+            expandedTeamNames.push(...resolved);
+            continue;
+          }
+        }
+        expandedTeamNames.push(raw);
+      }
+
       const teamIds: string[] = [];
-      for (const teamName of row.equipes) {
+      for (const teamName of expandedTeamNames) {
         const key = teamName.toLowerCase();
         let teamId = teamById.get(key);
         if (!teamId) {
