@@ -87,16 +87,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
                         <polyline points="9 18 15 12 9 6" />
                       </svg>
                     </span>
-                    <span
-                      className="chip"
-                      style={{
-                        fontSize: 10,
-                        padding: '0 5px',
-                        background: 'color-mix(in srgb, var(--text) 10%, transparent)',
-                        color: 'var(--text)',
-                        flexShrink: 0,
-                      }}
-                    >
+                    <span className="chip accent xs">
                       E{si + 1}
                     </span>
                     <span className="b small truncate" style={{ flex: 1 }}>{stage.name}</span>
@@ -120,7 +111,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
                     <div className="row gap-4" style={{ flexWrap: 'wrap' }}>
                       {stageTeams.length > 0 ? (
                         stageTeams.slice(0, 3).map((team: any) => (
-                          <span key={team.id} className="chip purple xs" style={{ fontSize: 9.5, padding: '2px 6px' }}>
+                          <span key={team.id} className="chip purple xs">
                             {team.name}
                           </span>
                         ))

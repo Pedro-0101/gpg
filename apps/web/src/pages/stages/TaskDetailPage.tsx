@@ -80,7 +80,7 @@ export const TaskDetailPage: React.FC = () => {
 
         {/* Title row */}
         <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-          <span className="chip outline xs" style={{ fontFamily: 'var(--font-mono)', fontSize: 10 }}>#{task.id.slice(-4).toUpperCase()}</span>
+          <span className="chip accent xs">#{task.id.slice(-4).toUpperCase()}</span>
           <StatusChip status={task.status} />
           {task.priority && <PrioChip priority={task.priority} />}
         </div>

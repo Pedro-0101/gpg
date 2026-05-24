@@ -366,15 +366,17 @@ body.theme-dark .btn.primary { color: #050505; }
 
 /* --- Chips / Status pills --- */
 .chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 1px 7px;
-  border-radius: 4px;
-  font-size: 11.5px;
-  font-weight: 500;
-  background: var(--surface-2);
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px; /* Pill shape */
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-3); /* Solid background by default */
   color: var(--text-2);
-  border: 1px solid transparent;
   white-space: nowrap;
+  line-height: 1;
+  border: 1px solid rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
 }
 .chip .dot {
   width: 6px; height: 6px;
@@ -382,24 +384,34 @@ body.theme-dark .btn.primary { color: #050505; }
   background: currentColor;
   flex-shrink: 0;
 }
-/* Status */
-.chip.todo    { background: var(--surface-2);    color: var(--text-2); }
+/* Status / Priority / Types */
+.chip.todo    { background: #E5E7EB; color: #4B5563; }
 .chip.inprog  { background: var(--info-soft);    color: var(--info); }
 .chip.review  { background: var(--warning-soft); color: var(--warning); }
 .chip.done    { background: var(--success-soft); color: var(--success); }
 .chip.blocked { background: var(--danger-soft);  color: var(--danger); }
-/* Priority */
+
 .chip.high    { background: var(--danger-soft);  color: var(--danger); }
 .chip.med     { background: var(--warning-soft); color: var(--warning); }
-.chip.low     { background: var(--surface-2);    color: var(--text-2); }
-/* Accent */
-.chip.accent  { background: var(--accent-soft);  color: var(--accent-text); }
-.chip.purple  { background: var(--purple-soft);  color: var(--purple); }
+.chip.low     { background: #F3F4F6;             color: #6B7280; }
+
+.chip.accent  { background: #EEF2FF; color: #4F46E5; border-color: #E0E7FF; }
+.chip.purple  { background: #F5F3FF; color: #7C3AED; border-color: #EDE9FE; }
 .chip.outline {
-  background: var(--surface);
-  border-color: var(--border-strong);
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  color: #374151;
 }
-.chip.xs { font-size: 10.5px; padding: 0 5px; }
+.chip.xs { font-size: 10px; padding: 2px 8px; }
+
+.chip.truncate {
+  max-width: 140px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  text-align: center;
+}
 
 /* --- Avatars --- */
 .av {
@@ -671,17 +683,20 @@ body.theme-dark .gantt-bar.stage-bar { color: #0A0A0A; }
    KANBAN
    ==================================================== */
 .kanban {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 10px;
-  min-height: 360px;
+  display: flex;
+  gap: 12px;
+  min-height: 480px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  width: 100%;
 }
 .kanban-col {
   background: var(--surface-2);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   display: flex; flex-direction: column;
-  min-width: 0;
+  min-width: 280px;
+  flex: 1;
 }
 .kanban-col-head {
   padding: 10px 12px;
@@ -715,7 +730,12 @@ body.theme-dark .gantt-bar.stage-bar { color: #0A0A0A; }
 }
 .kanban-card:hover { border-color: var(--border-strong); }
 .kanban-card .title {
-  font-weight: 500; color: var(--text); font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
 }
 .kanban-card .foot {
   display: flex; justify-content: space-between; align-items: center;

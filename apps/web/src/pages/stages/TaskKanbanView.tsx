@@ -35,8 +35,8 @@ export const TaskKanbanView: React.FC<TaskKanbanViewProps> = ({ project, stages 
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
-                <span className="chip outline xs">ETAPA</span>
-                <span className="b">{stage.name}</span>
+                <span className="chip accent xs">ETAPA</span>
+                <span className="chip accent xs">{stage.name}</span>
                 <span className="xs faint">{totalTasks} tarefas</span>
               </div>
               <div className="row" style={{ gap: 8 }}>
@@ -71,8 +71,10 @@ export const TaskKanbanView: React.FC<TaskKanbanViewProps> = ({ project, stages 
                             className="kanban-card"
                             style={{ textDecoration: 'none' }}
                           >
-                            <div className="row" style={{ gap: 4 }}>
-                              <span className="chip outline xs">{task.topicName || 'Tópico'}</span>
+                            <div className="row" style={{ gap: 4, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                              <span className="chip accent xs truncate" title={task.topicName || 'Tópico'}>
+                                {task.topicName || 'Tópico'}
+                              </span>
                               <PrioChip priority={task.priority || 'med'} />
                             </div>
                             <div className="title">{task.name}</div>

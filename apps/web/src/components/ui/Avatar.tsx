@@ -6,6 +6,7 @@ interface AvatarProps {
   colorIndex?: number;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  title?: string;
 }
 
 export const Avatar: React.FC<AvatarProps> = ({
@@ -13,12 +14,13 @@ export const Avatar: React.FC<AvatarProps> = ({
   colorIndex = 0,
   size = 'md',
   className,
+  title,
 }) => {
   const colorClass = `av-c${(Math.abs(colorIndex) % 8) + 1}`;
   const sizeClass = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : size === 'xl' ? 'xl' : '';
 
   return (
-    <div className={cn('av', colorClass, sizeClass, className)}>
+    <div className={cn('av', colorClass, sizeClass, className)} title={title}>
       {initials.slice(0, 2).toUpperCase()}
     </div>
   );

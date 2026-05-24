@@ -139,7 +139,7 @@ export function ProfessionalsPage({ project }: Props) {
                       </div>
                       <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                         {(p.skills ?? []).slice(0, 3).map((s) => (
-                          <span key={s} className="chip outline xs">{s}</span>
+                          <span key={s} className="chip purple xs">{s}</span>
                         ))}
                       </div>
                     </div>
