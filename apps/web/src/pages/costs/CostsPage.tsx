@@ -6,6 +6,8 @@ import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { BurndownChart } from '../../components/ui/BurndownChart';
 import { Avatar } from '../../components/ui/Avatar';
 import { costsApi } from '../../api/costs';
+import { membersApi } from '../../api/members';
+import { stagesApi } from '../../api/stages';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { Plus, Download, AlertTriangle, Trash2, X, Check } from 'lucide-react';
 import type { Project, CostEntry, CostSummary } from '../../types';
@@ -44,8 +46,26 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['costs', project.id] }),
   });
 
+  const { data: members = [] } = useQuery({
+    queryKey: ['members', project.id],
+    queryFn: () => membersApi.list(project.id),
+  });
+
+  const { data: stages = [] } = useQuery({
+    queryKey: ['stages', project.id],
+    queryFn: () => stagesApi.list(project.id),
+  });
+
   const { register, handleSubmit, reset } = useForm({
-    defaultValues: { description: '', category: 'Pessoal', amount: 0, hours: '' },
+    defaultValues: {
+      description: '',
+      category: 'Pessoal',
+      amount: 0,
+      hours: '',
+      date: new Date().toISOString().slice(0, 10),
+      memberId: '',
+      stageId: '',
+    },
   });
 
   if (isLoading) return <div className="muted p-8 text-center">Carregando finanças...</div>;
@@ -179,31 +199,69 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
         {showForm && (
           <div className="border-b border-border p-4 bg-surface-2">
             <form
-              className="grid grid-cols-5 gap-3 items-end"
+              className="flex flex-col gap-3"
               onSubmit={handleSubmit((d) =>
-                createMutation.mutate({ ...d, amount: Number(d.amount), hours: d.hours ? Number(d.hours) : null }),
+                createMutation.mutate({
+                  description: d.description,
+                  category: d.category,
+                  amount: Number(d.amount),
+                  hours: d.hours ? Number(d.hours) : null,
+                  date: d.date || undefined,
+                  memberId: d.memberId || null,
+                  stageId: d.stageId || null,
+                }),
               )}
             >
-              <div className="col gap-1 col-span-2">
-                <label className="xs muted font-bold uppercase">Descrição *</label>
-                <input className="input" placeholder="Ex: Horas Lina · UI sistema" {...register('description', { required: true })} />
+              <div className="grid grid-cols-4 gap-3">
+                <div className="col gap-1 col-span-2">
+                  <label className="xs muted font-bold uppercase">Descrição *</label>
+                  <input className="input" placeholder="Ex: Horas Lina · UI sistema" {...register('description', { required: true })} />
+                </div>
+                <div className="col gap-1">
+                  <label className="xs muted font-bold uppercase">Categoria</label>
+                  <select className="input" {...register('category')}>
+                    {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="col gap-1">
+                  <label className="xs muted font-bold uppercase">Data</label>
+                  <input type="date" className="input" {...register('date')} />
+                </div>
               </div>
-              <div className="col gap-1">
-                <label className="xs muted font-bold uppercase">Categoria</label>
-                <select className="input" {...register('category')}>
-                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                </select>
+              <div className="grid grid-cols-4 gap-3 items-end">
+                <div className="col gap-1">
+                  <label className="xs muted font-bold uppercase">Valor (R$) *</label>
+                  <input type="number" min={0} step={0.01} className="input" {...register('amount', { required: true })} />
+                </div>
+                <div className="col gap-1">
+                  <label className="xs muted font-bold uppercase">Horas</label>
+                  <input type="number" min={0} step={0.5} className="input" placeholder="Opcional" {...register('hours')} />
+                </div>
+                <div className="col gap-1">
+                  <label className="xs muted font-bold uppercase">Membro</label>
+                  <select className="input" {...register('memberId')}>
+                    <option value="">Nenhum</option>
+                    {(members as any[]).map((m: any) => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col gap-1">
+                  <label className="xs muted font-bold uppercase">Etapa</label>
+                  <select className="input" {...register('stageId')}>
+                    <option value="">Nenhuma</option>
+                    {(stages as any[]).map((s: any) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="col gap-1">
-                <label className="xs muted font-bold uppercase">Valor (R$) *</label>
-                <input type="number" min={0} step={0.01} className="input" {...register('amount', { required: true })} />
-              </div>
-              <div className="row gap-2">
-                <button type="submit" disabled={createMutation.isPending} className="btn primary sm">
-                  <Check size={14} /> {createMutation.isPending ? '...' : 'Salvar'}
-                </button>
+              <div className="row gap-2 justify-end">
                 <button type="button" className="btn sm ghost" onClick={() => { setShowForm(false); reset(); }}>
-                  <X size={14} />
+                  <X size={14} /> Cancelar
+                </button>
+                <button type="submit" disabled={createMutation.isPending} className="btn primary sm">
+                  <Check size={14} /> {createMutation.isPending ? 'Salvando...' : 'Salvar Lançamento'}
                 </button>
               </div>
             </form>
