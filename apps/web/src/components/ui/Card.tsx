@@ -4,10 +4,11 @@ import { cn } from '../../lib/utils';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className }) => (
-  <div className={cn('card', className)}>{children}</div>
+export const Card: React.FC<CardProps> = ({ children, className, style }) => (
+  <div className={cn('card', className)} style={style}>{children}</div>
 );
 
 interface CardHeaderProps {

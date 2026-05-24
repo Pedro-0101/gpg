@@ -58,6 +58,8 @@ export interface Subtopic {
   taskType: SubtopicType;
   priority: SubtopicPriority;
   assignments: SubtopicAssignment[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SubtopicAssignment {

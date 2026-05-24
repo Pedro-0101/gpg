@@ -22,8 +22,8 @@ interface Props {
   topic: Topic;
 }
 
-const statusLabel = { pending: 'Pendente', in_progress: 'Em andamento', completed: 'Concluído' };
-const statusVariant = { pending: 'secondary', in_progress: 'default', completed: 'success' } as const;
+const statusLabel: Record<string, string> = { todo: 'Pendente', inprog: 'Em andamento', review: 'Revisão', done: 'Concluído', blocked: 'Bloqueado' };
+const statusVariant: Record<string, 'secondary' | 'default' | 'success'> = { todo: 'secondary', inprog: 'default', review: 'default', done: 'success', blocked: 'secondary' };
 
 export function SubtopicSection({ project, stage, topic }: Props) {
   const qc = useQueryClient();
@@ -38,7 +38,7 @@ export function SubtopicSection({ project, stage, topic }: Props) {
 
   const form = useForm<CreateSubtopicDto>({
     resolver: zodResolver(createSubtopicSchema),
-    defaultValues: { isConcurrent: false, order: subtopics.length + 1, status: 'pending', progress: 0 },
+    defaultValues: { isConcurrent: false, order: subtopics.length + 1, status: 'todo' as const, progress: 0 },
   });
 
   const saveMutation = useMutation({
@@ -72,7 +72,7 @@ export function SubtopicSection({ project, stage, topic }: Props) {
       });
     } else {
       setEditing(null);
-      form.reset({ isConcurrent: false, order: subtopics.length + 1, status: 'pending', progress: 0 });
+      form.reset({ isConcurrent: false, order: subtopics.length + 1, status: 'todo' as const, progress: 0 });
     }
     setOpen(true);
   }
@@ -200,9 +200,11 @@ export function SubtopicSection({ project, stage, topic }: Props) {
                 <Select value={form.watch('status')} onValueChange={(v) => form.setValue('status', v as CreateSubtopicDto['status'])}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="in_progress">Em andamento</SelectItem>
-                    <SelectItem value="completed">Concluído</SelectItem>
+                    <SelectItem value="todo">Pendente</SelectItem>
+                    <SelectItem value="inprog">Em andamento</SelectItem>
+                    <SelectItem value="review">Revisão</SelectItem>
+                    <SelectItem value="done">Concluído</SelectItem>
+                    <SelectItem value="blocked">Bloqueado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

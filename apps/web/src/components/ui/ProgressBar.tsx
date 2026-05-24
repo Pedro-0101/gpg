@@ -6,16 +6,18 @@ interface ProgressBarProps {
   variant?: 'default' | 'success';
   className?: string;
   showLabel?: boolean;
+  style?: React.CSSProperties;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ 
-  progress, 
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+  progress,
   variant = 'default',
   className,
-  showLabel = false
+  showLabel = false,
+  style,
 }) => {
   return (
-    <div className={cn('row fill', className)}>
+    <div className={cn('row fill', className)} style={style}>
       <div className={cn('bar fill', variant === 'success' && 'success')}>
         <span style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
       </div>

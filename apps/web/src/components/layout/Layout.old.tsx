@@ -16,5 +16,3 @@ export function Layout() {
   );
 }
 
-// Manter ProjectNav por compatibilidade até que as páginas sejam migradas
-export { ProjectNav } from './Layout.old'; 
