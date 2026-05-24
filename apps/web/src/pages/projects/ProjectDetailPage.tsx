@@ -12,6 +12,7 @@ import { CostsPage } from '../costs/CostsPage';
 import { ReportsPage } from './ReportsPage';
 import { StakeholdersPage } from '../stakeholders/StakeholdersPage';
 import { ProfessionalsPage } from '../professionals/ProfessionalsPage';
+import { TeamsPage } from '../teams/TeamsPage';
 import { Plus } from 'lucide-react';
 
 export function ProjectDetailPage() {
@@ -30,7 +31,8 @@ export function ProjectDetailPage() {
     { to: '', label: 'Visão Geral', end: true },
     { to: 'stages', label: 'Tarefas' },
     { to: 'gantt', label: 'Gantt' },
-    { to: 'team', label: 'Equipe' },
+    { to: 'team', label: 'Membros' },
+    { to: 'teams', label: 'Equipes' },
     { to: 'costs', label: 'Custos' },
     { to: 'stakeholders', label: 'Stakeholders' },
     { to: 'professionals', label: 'Profissionais' },
@@ -54,6 +56,7 @@ export function ProjectDetailPage() {
           <Route path="stages/*" element={<StagesPage project={project} />} />
           <Route path="gantt" element={<GanttPage project={project} />} />
           <Route path="team" element={<MembersPage project={project} />} />
+          <Route path="teams" element={<TeamsPage project={project} />} />
           <Route path="costs" element={<CostsPage project={project} />} />
           <Route path="reports" element={<ReportsPage project={project} />} />
           <Route path="stakeholders" element={<StakeholdersPage project={project} />} />
