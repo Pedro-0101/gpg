@@ -39,6 +39,12 @@ export type SubtopicStatus = 'todo' | 'inprog' | 'review' | 'done' | 'blocked';
 export type SubtopicPriority = 'high' | 'med' | 'low';
 export type SubtopicType = 'task' | 'milestone' | 'deliverable';
 
+export interface SubtopicTeamRelation {
+  subtopicId: string;
+  teamId: string;
+  team: Team;
+}
+
 export interface Subtopic {
   id: string;
   topicId: string;
@@ -49,46 +55,31 @@ export interface Subtopic {
   order: number;
   startDate: string | null;
   endDate: string | null;
-  teamId: string | null;
-  team: Team | null;
+  teams: SubtopicTeamRelation[];
   status: SubtopicStatus;
   progress: number;
   spentHours: number;
   deadline: string | null;
   taskType: SubtopicType;
   priority: SubtopicPriority;
-  assignments: SubtopicAssignment[];
   createdAt?: string;
   updatedAt?: string;
-}
-
-export interface SubtopicAssignment {
-  subtopicId: string;
-  memberId: string;
-  member: TeamMember;
-}
-
-export interface TeamMember {
-  id: string;
-  projectId: string;
-  name: string;
-  initials: string;
-  role: string;
-  skills: string[];
-  avatarColor: number;
-  createdAt: string;
 }
 
 export interface Professional {
   id: string;
   projectId: string;
+  name: string;
+  initials: string;
   role: string;
   hourlyCost: number | string;
+  skills: string[];
+  avatarColor: number;
+  createdAt: string;
 }
 
 export interface TeamProfessional {
   professionalId: string;
-  quantity: number;
   professional: Professional;
 }
 
@@ -97,7 +88,7 @@ export interface Team {
   projectId: string;
   name: string;
   professionals: TeamProfessional[];
-  totalCost?: number;
+  totalCostPerHour?: number;
 }
 
 export interface Stakeholder {
@@ -117,14 +108,14 @@ export interface CostEntry {
   id: string;
   projectId: string;
   stageId: string | null;
-  memberId: string | null;
+  professionalId: string | null;
   description: string;
   category: string;
   amount: string | number;
   hours: number | null;
   date: string;
   stage?: Stage | null;
-  member?: TeamMember | null;
+  professional?: Professional | null;
   createdAt: string;
 }
 
@@ -160,12 +151,12 @@ export interface Milestone {
 export interface Decision {
   id: string;
   projectId: string;
-  memberId: string | null;
+  professionalId: string | null;
   title: string;
   description: string | null;
   dueDate: string | null;
   status: 'pending' | 'decided' | 'cancelled';
-  member?: TeamMember | null;
+  professional?: Professional | null;
   createdAt: string;
 }
 
@@ -191,6 +182,9 @@ export interface SubtopicAttachment {
 export interface MemberMetrics {
   memberId: string;
   name: string;
+  role: string;
+  initials: string;
+  avatarColor: number;
   activeTasks: number;
   completedTasks: number;
   loadPercent: number;

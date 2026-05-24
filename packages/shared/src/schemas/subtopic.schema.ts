@@ -6,7 +6,7 @@ export const createSubtopicSchema = z.object({
   durationHours: z.number().int().min(1),
   isConcurrent: z.boolean().default(false),
   order: z.number().int().min(1).default(1),
-  teamId: z.string().optional().nullable(),
+  teamIds: z.string().array().optional().default([]),
   status: z.enum(['todo', 'inprog', 'review', 'done', 'blocked']).default('todo'),
   progress: z.number().int().min(0).max(100).default(0),
   spentHours: z.number().min(0).default(0),

@@ -16,7 +16,7 @@ export async function findAll(stageId: string) {
     include: {
       subtopics: {
         orderBy: { order: 'asc' },
-        include: { team: true },
+        include: { teams: { include: { team: true } } },
       },
     },
   });

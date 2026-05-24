@@ -11,10 +11,6 @@ subtopicsRouter.get('/:id', ctrl.get);
 subtopicsRouter.patch('/:id', ctrl.update);
 subtopicsRouter.delete('/:id', ctrl.remove);
 
-// Assignments
-subtopicsRouter.post('/:id/assignments', ctrl.assignMember);
-subtopicsRouter.delete('/:id/assignments/:memberId', ctrl.unassignMember);
-
 // Comments
 subtopicsRouter.use('/:subtopicId/comments', commentsRouter);
 

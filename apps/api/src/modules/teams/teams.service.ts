@@ -15,9 +15,9 @@ export async function findAll(projectId: string) {
 
   return teams.map((t: typeof teams[number]) => ({
     ...t,
-    totalCost: t.professionals.reduce(
-      (sum: number, tp: { professional: { hourlyCost: number | string | object }; quantity: number }) =>
-        sum + Number(tp.professional.hourlyCost) * tp.quantity,
+    totalCostPerHour: t.professionals.reduce(
+      (sum: number, tp: { professional: { hourlyCost: number | string | object } }) =>
+        sum + Number(tp.professional.hourlyCost),
       0,
     ),
   }));
@@ -31,9 +31,9 @@ export async function findById(id: string, projectId: string) {
   if (!team) throw new AppError(404, 'Equipe não encontrada');
   return {
     ...team,
-    totalCost: team.professionals.reduce(
-      (sum: number, tp: { professional: { hourlyCost: number | string | object }; quantity: number }) =>
-        sum + Number(tp.professional.hourlyCost) * tp.quantity,
+    totalCostPerHour: team.professionals.reduce(
+      (sum: number, tp: { professional: { hourlyCost: number | string | object } }) =>
+        sum + Number(tp.professional.hourlyCost),
       0,
     ),
   };
@@ -41,20 +41,16 @@ export async function findById(id: string, projectId: string) {
 
 export async function create(projectId: string, data: CreateTeamDto) {
   const { professionals, ...rest } = data;
-  const team = await prisma.team.create({
+  return prisma.team.create({
     data: {
       ...rest,
       projectId,
       professionals: {
-        create: professionals.map((p) => ({
-          professionalId: p.professionalId,
-          quantity: p.quantity,
-        })),
+        create: professionals.map((p) => ({ professionalId: p.professionalId })),
       },
     },
     include: { professionals: { include: { professional: true } } },
   });
-  return team;
 }
 
 export async function update(id: string, projectId: string, data: UpdateTeamDto) {
@@ -71,10 +67,7 @@ export async function update(id: string, projectId: string, data: UpdateTeamDto)
       ...rest,
       ...(professionals !== undefined && {
         professionals: {
-          create: professionals.map((p) => ({
-            professionalId: p.professionalId,
-            quantity: p.quantity,
-          })),
+          create: professionals.map((p) => ({ professionalId: p.professionalId })),
         },
       }),
     },

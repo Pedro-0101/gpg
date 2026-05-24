@@ -14,8 +14,7 @@ export async function findAll(projectId: string) {
             subtopics: {
               orderBy: { order: 'asc' },
               include: {
-                team: true,
-                assignments: { include: { member: true } },
+                teams: { include: { team: { include: { professionals: { include: { professional: true } } } } } },
               },
             },
           },

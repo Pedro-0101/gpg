@@ -7,7 +7,7 @@ export async function findAll(projectId: string) {
     where: { projectId },
     include: {
       stage: true,
-      member: true,
+      professional: true,
     },
     orderBy: { date: 'desc' },
   });
@@ -21,7 +21,7 @@ export async function create(projectId: string, data: CreateCostEntryDto) {
     },
     include: {
       stage: true,
-      member: true,
+      professional: true,
     },
   });
 }

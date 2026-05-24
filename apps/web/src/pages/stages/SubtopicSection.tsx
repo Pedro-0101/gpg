@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Pencil, Trash2, GitBranch, ArrowRight } from 'lucide-react';
-import { createSubtopicSchema, CreateSubtopicDto } from '@gpg/shared';
+import { createSubtopicSchema } from '@gpg/shared';
+import type { CreateSubtopicDto } from '@gpg/shared';
 import { subtopicsApi } from '@/api/subtopics';
 import { teamsApi } from '@/api/teams';
 import { Project, Stage, Topic, Subtopic } from '@/types';
@@ -66,13 +67,13 @@ export function SubtopicSection({ project, stage, topic }: Props) {
         durationHours: sub.durationHours,
         isConcurrent: sub.isConcurrent,
         order: sub.order,
-        teamId: sub.teamId ?? undefined,
+        teamIds: sub.teams.map((t) => t.teamId),
         status: sub.status,
         progress: sub.progress,
       });
     } else {
       setEditing(null);
-      form.reset({ isConcurrent: false, order: subtopics.length + 1, status: 'todo' as const, progress: 0 });
+      form.reset({ isConcurrent: false, order: subtopics.length + 1, status: 'todo' as const, progress: 0, teamIds: [] });
     }
     setOpen(true);
   }
@@ -114,7 +115,9 @@ export function SubtopicSection({ project, stage, topic }: Props) {
                 {formatDate(sub.startDate)} → {formatDate(sub.endDate)}
               </span>
             )}
-            {sub.team && <Badge variant="outline" className="text-xs shrink-0">{sub.team.name}</Badge>}
+            {sub.teams?.map((t) => (
+              <Badge key={t.teamId} variant="outline" className="text-xs shrink-0">{t.team.name}</Badge>
+            ))}
             <Badge variant={statusVariant[sub.status] as 'secondary' | 'default' | 'success'} className="text-xs shrink-0">
               {statusLabel[sub.status]}
             </Badge>
@@ -178,21 +181,29 @@ export function SubtopicSection({ project, stage, topic }: Props) {
               </p>
             </div>
             <div className="space-y-1">
-              <Label>Equipe responsável</Label>
-              <Select
-                value={form.watch('teamId') ?? ''}
-                onValueChange={(v) => form.setValue('teamId', v === '__none__' ? null : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sem equipe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Sem equipe</SelectItem>
-                  {teams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Equipes responsáveis</Label>
+              {teams.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhuma equipe cadastrada no projeto.</p>
+              ) : (
+                <div className="rounded border border-input p-2 space-y-1 max-h-36 overflow-y-auto">
+                  {teams.map((t) => {
+                    const checked = (form.watch('teamIds') ?? []).includes(t.id);
+                    return (
+                      <label key={t.id} className="flex items-center gap-2 cursor-pointer py-0.5">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const cur = form.getValues('teamIds') ?? [];
+                            form.setValue('teamIds', e.target.checked ? [...cur, t.id] : cur.filter((id) => id !== t.id));
+                          }}
+                        />
+                        <span className="text-sm">{t.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">

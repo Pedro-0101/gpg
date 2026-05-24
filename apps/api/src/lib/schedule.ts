@@ -3,10 +3,10 @@
  *
  * Regras:
  * - Etapas são sempre sequenciais (etapa N começa quando etapa N-1 termina)
- * - Tópicos dentro de uma etapa são concorrentes (todos começam no início da etapa)
+ * - Tópicos dentro de uma etapa são sempre sequenciais (tópico N começa quando tópico N-1 termina)
  * - Subtópicos dentro de um tópico:
- *   - isConcurrent=true  → todos começam no início do tópico (paralelo)
- *   - isConcurrent=false → sequential, começa após o último concurrent ou sequential anterior
+ *   - isConcurrent=true  → todos começam ao mesmo tempo, no início do tópico (bloco paralelo)
+ *   - isConcurrent=false → sequencial, começa após o bloco concurrent terminar e após o anterior sequencial
  */
 
 import { addDays } from 'date-fns';
@@ -20,6 +20,7 @@ interface SubtopicInput {
 
 interface TopicInput {
   id: string;
+  order: number;
   subtopics: SubtopicInput[];
 }
 
@@ -55,43 +56,38 @@ function hoursToWorkDays(hours: number, dailyHours: number): number {
 
 function addWorkDays(start: Date, days: number): Date {
   if (days <= 0) return start;
-  const wholeDays = Math.floor(days);
-  const fractional = days - wholeDays;
-  const result = addDays(start, wholeDays);
-  if (fractional > 0) {
-    return addDays(result, 1);
-  }
-  return result;
+  const whole = Math.floor(days);
+  const frac = days - whole;
+  const result = addDays(start, whole);
+  return frac > 0 ? addDays(result, 1) : result;
 }
 
 function scheduleTopic(topic: TopicInput, topicStart: Date, dailyHours: number): ScheduledTopic {
   const subtopics: ScheduledSubtopic[] = [];
-
   const sorted = [...topic.subtopics].sort((a, b) => a.order - b.order);
 
-  // Concurrent subtopics all start at topicStart
   const concurrent = sorted.filter((s) => s.isConcurrent);
   const sequential = sorted.filter((s) => !s.isConcurrent);
 
+  // Bloco concurrent: todas as tasks paralelas começam juntas no início do tópico
   let concurrentEnd = topicStart;
-
   for (const sub of concurrent) {
-    const days = hoursToWorkDays(sub.durationHours, dailyHours);
-    const endDate = addWorkDays(topicStart, days);
-    subtopics.push({ id: sub.id, startDate: topicStart, endDate });
-    if (endDate > concurrentEnd) concurrentEnd = endDate;
+    const end = addWorkDays(topicStart, hoursToWorkDays(sub.durationHours, dailyHours));
+    subtopics.push({ id: sub.id, startDate: topicStart, endDate: end });
+    if (end > concurrentEnd) concurrentEnd = end;
   }
 
-  // Sequential subtopics start after all concurrent ones finish
+  // Tasks sequenciais: encadeiam após o bloco concurrent (ou início do tópico se não houver concurrent)
   let cursor = concurrentEnd;
   for (const sub of sequential) {
-    const days = hoursToWorkDays(sub.durationHours, dailyHours);
-    const endDate = addWorkDays(cursor, days);
-    subtopics.push({ id: sub.id, startDate: cursor, endDate });
-    cursor = endDate;
+    const end = addWorkDays(cursor, hoursToWorkDays(sub.durationHours, dailyHours));
+    subtopics.push({ id: sub.id, startDate: cursor, endDate: end });
+    cursor = end;
   }
 
-  const topicEnd = subtopics.length > 0 ? subtopics.reduce((max, s) => (s.endDate > max ? s.endDate : max), topicStart) : topicStart;
+  const topicEnd = subtopics.length > 0
+    ? subtopics.reduce((max, s) => (s.endDate > max ? s.endDate : max), topicStart)
+    : topicStart;
 
   return { id: topic.id, startDate: topicStart, endDate: topicEnd, subtopics };
 }
@@ -101,27 +97,27 @@ export function calculateSchedule(
   dailyHours: number,
   stages: StageInput[],
 ): ScheduledStage[] {
-  const sorted = [...stages].sort((a, b) => a.order - b.order);
   const result: ScheduledStage[] = [];
+  let stageCursor = new Date(projectStart);
 
-  let cursor = projectStart;
-
-  for (const stage of sorted) {
-    const stageStart = cursor;
+  for (const stage of [...stages].sort((a, b) => a.order - b.order)) {
+    const stageStart = stageCursor;
     const scheduledTopics: ScheduledTopic[] = [];
 
-    // All topics within a stage are concurrent (start at stageStart)
-    for (const topic of stage.topics) {
-      scheduledTopics.push(scheduleTopic(topic, stageStart, dailyHours));
+    // Tópicos sequenciais dentro da etapa
+    let topicCursor = stageStart;
+    for (const topic of [...stage.topics].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))) {
+      const scheduled = scheduleTopic(topic, topicCursor, dailyHours);
+      scheduledTopics.push(scheduled);
+      topicCursor = scheduled.endDate;
     }
 
-    const stageEnd =
-      scheduledTopics.length > 0
-        ? scheduledTopics.reduce((max, t) => (t.endDate > max ? t.endDate : max), stageStart)
-        : stageStart;
+    const stageEnd = scheduledTopics.length > 0
+      ? scheduledTopics[scheduledTopics.length - 1].endDate
+      : stageStart;
 
     result.push({ id: stage.id, startDate: stageStart, endDate: stageEnd, topics: scheduledTopics });
-    cursor = stageEnd;
+    stageCursor = stageEnd;
   }
 
   return result;

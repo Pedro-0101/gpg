@@ -45,23 +45,3 @@ export async function remove(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export async function assignMember(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { id: subtopicId } = req.params;
-    const { memberId } = req.body;
-    const assignment = await service.assignMember(subtopicId, memberId);
-    res.status(201).json(assignment);
-  } catch (e) {
-    next(e);
-  }
-}
-
-export async function unassignMember(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { id: subtopicId, memberId } = req.params;
-    await service.unassignMember(subtopicId, memberId);
-    res.status(204).send();
-  } catch (e) {
-    next(e);
-  }
-}

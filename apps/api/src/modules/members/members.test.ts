@@ -77,7 +77,7 @@ describe('Members API', () => {
     const response = await request(app).delete(`/api/v1/projects/${projectId}/members/${memberId}`);
     expect(response.status).toBe(204);
 
-    const check = await prisma.teamMember.findUnique({ where: { id: memberId } });
+    const check = await prisma.professional.findUnique({ where: { id: memberId } });
     expect(check).toBeNull();
   });
 });

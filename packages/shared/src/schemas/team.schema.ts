@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const teamProfessionalSchema = z.object({
   professionalId: z.string(),
-  quantity: z.number().int().min(1).default(1),
 });
 
 export const createTeamSchema = z.object({

@@ -12,32 +12,22 @@ async function getProjectId(topicId: string): Promise<string> {
   return topic.stage.projectId;
 }
 
+const subtopicInclude = {
+  teams: { include: { team: { include: { professionals: { include: { professional: true } } } } } },
+} as const;
+
 export async function findAll(topicId: string) {
   return prisma.subtopic.findMany({
     where: { topicId },
     orderBy: { order: 'asc' },
-    include: { 
-      team: true,
-      assignments: {
-        include: {
-          member: true
-        }
-      }
-    },
+    include: subtopicInclude,
   });
 }
 
 export async function findById(id: string, topicId: string) {
-  const sub = await prisma.subtopic.findFirst({ 
+  const sub = await prisma.subtopic.findFirst({
     where: { id, topicId },
-    include: { 
-      team: true,
-      assignments: {
-        include: {
-          member: true
-        }
-      }
-    }
+    include: subtopicInclude,
   });
   if (!sub) throw new AppError(404, 'Subtópico não encontrado');
   return sub;
@@ -45,44 +35,36 @@ export async function findById(id: string, topicId: string) {
 
 export async function create(topicId: string, data: CreateSubtopicDto) {
   const projectId = await getProjectId(topicId);
-  const sub = await prisma.subtopic.create({ 
-    data: { ...data, topicId },
-    include: { assignments: { include: { member: true } } }
+  const { teamIds = [], ...rest } = data;
+  const sub = await prisma.subtopic.create({
+    data: {
+      ...rest,
+      topicId,
+      teams: { create: teamIds.map((teamId) => ({ teamId })) },
+    },
+    include: subtopicInclude,
   });
   await recalculateSchedule(projectId);
   return sub;
 }
 
-export async function assignMember(subtopicId: string, memberId: string) {
-  return prisma.subtopicAssignment.create({
-    data: {
-      subtopicId,
-      memberId,
-    },
-    include: {
-      member: true,
-    },
-  });
-}
-
-export async function unassignMember(subtopicId: string, memberId: string) {
-  return prisma.subtopicAssignment.delete({
-    where: {
-      subtopicId_memberId: {
-        subtopicId,
-        memberId,
-      },
-    },
-  });
-}
 
 export async function update(id: string, topicId: string, data: UpdateSubtopicDto) {
   await findById(id, topicId);
   const projectId = await getProjectId(topicId);
+  const { teamIds, ...rest } = data;
+  if (teamIds !== undefined) {
+    await prisma.subtopicTeam.deleteMany({ where: { subtopicId: id } });
+  }
   const sub = await prisma.subtopic.update({
     where: { id },
-    data,
-    include: { team: true, assignments: { include: { member: true } } },
+    data: {
+      ...rest,
+      ...(teamIds !== undefined && {
+        teams: { create: teamIds.map((teamId) => ({ teamId })) },
+      }),
+    },
+    include: subtopicInclude,
   });
   await recalculateSchedule(projectId);
   return sub;

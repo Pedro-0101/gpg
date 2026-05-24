@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createCostEntrySchema = z.object({
   stageId: z.string().optional().nullable(),
-  memberId: z.string().optional().nullable(),
+  professionalId: z.string().optional().nullable(),
   description: z.string().min(1),
   category: z.enum(['Pessoal', 'Ferramentas', 'Infraestrutura', 'Freelancers']),
   amount: z.number().min(0),

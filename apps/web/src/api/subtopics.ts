@@ -16,8 +16,4 @@ export const subtopicsApi = {
     api.patch<Subtopic>(`${base(pid, sid, tid)}/${id}`, data).then((r) => r.data),
   remove: (pid: string, sid: string, tid: string, id: string) =>
     api.delete(`${base(pid, sid, tid)}/${id}`),
-  assignMember: (pid: string, sid: string, tid: string, id: string, memberId: string) =>
-    api.post(`${base(pid, sid, tid)}/${id}/assignments`, { memberId }).then((r) => r.data),
-  unassignMember: (pid: string, sid: string, tid: string, id: string, memberId: string) =>
-    api.delete(`${base(pid, sid, tid)}/${id}/assignments/${memberId}`),
 };

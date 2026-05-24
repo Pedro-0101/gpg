@@ -5,7 +5,7 @@ import { AppError } from '../../lib/app-error';
 export async function findAll(projectId: string) {
   return prisma.decision.findMany({
     where: { projectId },
-    include: { member: true },
+    include: { professional: true },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -13,7 +13,7 @@ export async function findAll(projectId: string) {
 export async function findById(id: string, projectId: string) {
   const d = await prisma.decision.findFirst({
     where: { id, projectId },
-    include: { member: true },
+    include: { professional: true },
   });
   if (!d) throw new AppError(404, 'Decisão não encontrada');
   return d;
@@ -22,7 +22,7 @@ export async function findById(id: string, projectId: string) {
 export async function create(projectId: string, data: CreateDecisionDto) {
   return prisma.decision.create({
     data: { ...data, projectId },
-    include: { member: true },
+    include: { professional: true },
   });
 }
 
@@ -31,7 +31,7 @@ export async function update(id: string, projectId: string, data: UpdateDecision
   return prisma.decision.update({
     where: { id },
     data,
-    include: { member: true },
+    include: { professional: true },
   });
 }
 

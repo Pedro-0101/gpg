@@ -1,37 +1,24 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, FolderKanban, Calendar } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createProjectSchema, CreateProjectDto } from '@gpg/shared';
 import { projectsApi } from '@/api/projects';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { formatDate } from '@/lib/utils';
-import { Project } from '@/types';
+import { StatusChip } from '../../components/ui/StatusChip';
+import { formatDate, formatCurrency } from '@/lib/utils';
+import type { Project } from '@/types';
 
-const statusLabel: Record<string, string> = {
-  active: 'Ativo',
-  paused: 'Pausado',
-  completed: 'Concluído',
-  cancelled: 'Cancelado',
-};
-const statusVariant: Record<string, 'default' | 'secondary' | 'success' | 'destructive'> = {
-  active: 'default',
-  paused: 'warning' as 'secondary',
-  completed: 'success',
-  cancelled: 'destructive',
+const inputStyle = {
+  width: '100%',
+  padding: '7px 10px',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
+  background: 'var(--surface-2)',
+  color: 'var(--text)',
+  fontSize: 13,
+  outline: 'none',
+  boxSizing: 'border-box' as const,
 };
 
 export function ProjectsPage() {
@@ -50,13 +37,10 @@ export function ProjectsPage() {
     defaultValues: { dailyHours: 8, status: 'active' },
   });
 
-  const createMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: (data: CreateProjectDto) =>
       editing ? projectsApi.update(editing.id, data) : projectsApi.create(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['projects'] });
-      handleClose();
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['projects'] }); close(); },
   });
 
   const deleteMutation = useMutation({
@@ -64,7 +48,7 @@ export function ProjectsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
   });
 
-  function handleOpen(project?: Project) {
+  function open_(project?: Project) {
     if (project) {
       setEditing(project);
       form.reset({
@@ -81,142 +65,156 @@ export function ProjectsPage() {
     setOpen(true);
   }
 
-  function handleClose() {
-    setOpen(false);
-    setEditing(null);
-    form.reset();
+  function close() { setOpen(false); setEditing(null); form.reset(); }
+
+  function projectProgress(p: any) {
+    const subs = (p.stages ?? []).flatMap((s: any) => (s.topics ?? []).flatMap((t: any) => t.subtopics ?? []));
+    if (subs.length === 0) return 0;
+    return Math.round((subs.filter((s: any) => s.status === 'done').length / subs.length) * 100);
   }
 
+  const PROJECT_COLORS = ['#4F46E5', '#0EA5E9', '#10B981', '#EF4444', '#F59E0B', '#7C3AED', '#EC4899', '#06B6D4'];
+
   return (
-    <div className="flex-1 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">Projetos</h1>
-            <p className="text-muted-foreground text-sm mt-1">Gerencie todos os seus projetos</p>
-          </div>
-          <Button onClick={() => handleOpen()}>
-            <Plus className="h-4 w-4" />
-            Novo Projeto
-          </Button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="page-head">
+        <div>
+          <div className="page-title">Projetos</div>
+          <div className="page-sub">Todos os projetos do workspace</div>
         </div>
-
-        {isLoading && <p className="text-muted-foreground">Carregando...</p>}
-
-        <div className="grid gap-4">
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className="border rounded-lg p-5 bg-white hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`/projects/${project.id}`)}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <FolderKanban className="h-5 w-5 text-primary shrink-0" />
-                  <div>
-                    <h2 className="font-semibold">{project.name}</h2>
-                    {project.description && (
-                      <p className="text-sm text-muted-foreground mt-0.5">{project.description}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <Badge variant={statusVariant[project.status] ?? 'secondary'}>
-                    {statusLabel[project.status] ?? project.status}
-                  </Badge>
-                  <Button variant="ghost" size="icon" onClick={() => handleOpen(project)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (confirm('Excluir projeto e todos seus dados?')) {
-                        deleteMutation.mutate(project.id);
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Início: {formatDate(project.startDate)}
-                </span>
-                <span>{project.dailyHours}h/dia</span>
-                {project._count && (
-                  <>
-                    <span>{project._count.stages} etapas</span>
-                    <span>{project._count.teams} equipes</span>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {!isLoading && projects.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground border rounded-lg border-dashed">
-              <FolderKanban className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Nenhum projeto criado ainda.</p>
-              <Button variant="outline" className="mt-4" onClick={() => handleOpen()}>
-                Criar primeiro projeto
-              </Button>
-            </div>
-          )}
-        </div>
+        <button className="btn primary" onClick={() => open_()}>+ Novo Projeto</button>
       </div>
 
-      <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Editar Projeto' : 'Novo Projeto'}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={form.handleSubmit((d) => createMutation.mutate(d))}
-            className="space-y-4"
-          >
-            <div className="space-y-1">
-              <Label>Nome *</Label>
-              <Input {...form.register('name')} placeholder="Nome do projeto" />
-              {form.formState.errors.name && (
-                <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label>Descrição</Label>
-              <Textarea {...form.register('description')} placeholder="Descrição opcional" rows={2} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Data de início *</Label>
-                <Input
-                  type="date"
-                  {...form.register('startDate', { valueAsDate: true })}
-                />
+      {isLoading && <div className="faint" style={{ padding: 32, textAlign: 'center' }}>Carregando...</div>}
+
+      {/* Project cards grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
+        {(projects as any[]).map((p, i) => {
+          const pct = projectProgress(p);
+          const color = p.color || PROJECT_COLORS[i % PROJECT_COLORS.length];
+          return (
+            <div
+              key={p.id}
+              className="card"
+              style={{ cursor: 'pointer', transition: 'box-shadow .15s' }}
+              onClick={() => navigate(`/projects/${p.id}`)}
+            >
+              <div style={{ padding: '16px 16px 12px' }}>
+                <div className="row" style={{ gap: 12, marginBottom: 12 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                    background: `linear-gradient(135deg, ${color}, #7C3AED)`,
+                    display: 'grid', placeItems: 'center',
+                    color: 'white', fontSize: 18, fontWeight: 700,
+                  }}>
+                    {p.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="fill" style={{ overflow: 'hidden' }}>
+                    <div className="b truncate" style={{ fontSize: 15 }}>{p.name}</div>
+                    {p.client && <div className="xs faint truncate">{p.client}</div>}
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <StatusChip status={p.status || 'todo'} />
+                  </div>
+                </div>
+
+                {p.description && (
+                  <div className="xs faint" style={{ marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {p.description}
+                  </div>
+                )}
+
+                <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                  <div className="bar fill">
+                    <span style={{ width: `${pct}%`, background: color }} />
+                  </div>
+                  <span className="xs b" style={{ width: 32, textAlign: 'right' }}>{pct}%</span>
+                </div>
+
+                <div className="row" style={{ gap: 12 }}>
+                  <span className="xs faint">{formatDate(p.startDate)}{p.endDate ? ` → ${formatDate(p.endDate)}` : ''}</span>
+                  {p.totalBudget > 0 && (
+                    <span className="xs faint" style={{ marginLeft: 'auto' }}>{formatCurrency(p.totalBudget)}</span>
+                  )}
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label>Horas por dia</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={24}
-                  {...form.register('dailyHours', { valueAsNumber: true })}
-                />
+
+              <div style={{ borderTop: '1px solid var(--border)', padding: '8px 16px', display: 'flex', gap: 6, justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
+                <button className="btn ghost sm" onClick={() => open_(p)}>Editar</button>
+                <button
+                  className="btn ghost sm"
+                  style={{ color: 'var(--danger)' }}
+                  onClick={() => { if (confirm('Excluir projeto e todos seus dados?')) deleteMutation.mutate(p.id); }}
+                >
+                  Excluir
+                </button>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          );
+        })}
+      </div>
+
+      {!isLoading && projects.length === 0 && (
+        <div className="card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)' }}>
+          <div style={{ marginBottom: 12 }}>Nenhum projeto criado ainda.</div>
+          <button className="btn primary" onClick={() => open_()}>+ Criar primeiro projeto</button>
+        </div>
+      )}
+
+      {/* Modal */}
+      {open && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'grid', placeItems: 'center', zIndex: 100 }}
+          onClick={(e) => { if (e.target === e.currentTarget) close(); }}
+        >
+          <div className="card" style={{ width: 440, padding: 24 }} onClick={(e) => e.stopPropagation()}>
+            <div className="card-head" style={{ marginBottom: 16 }}>
+              <div className="card-title">{editing ? 'Editar Projeto' : 'Novo Projeto'}</div>
+              <button className="btn ghost sm" onClick={close}>✕</button>
+            </div>
+            <form onSubmit={form.handleSubmit((d) => saveMutation.mutate(d))}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Nome *</label>
+                  <input style={inputStyle} {...form.register('name')} placeholder="Nome do projeto" />
+                  {form.formState.errors.name && (
+                    <div style={{ color: 'var(--danger)', fontSize: 11, marginTop: 3 }}>{form.formState.errors.name.message}</div>
+                  )}
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Descrição</label>
+                  <textarea style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} {...form.register('description')} placeholder="Descrição opcional" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Data de início *</label>
+                    <input type="date" style={inputStyle} {...form.register('startDate', { valueAsDate: true })} />
+                  </div>
+                  <div>
+                    <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Horas por dia</label>
+                    <input type="number" min={1} max={24} style={inputStyle} {...form.register('dailyHours', { valueAsNumber: true })} />
+                  </div>
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Status</label>
+                  <select style={inputStyle} {...form.register('status')}>
+                    <option value="active">Ativo</option>
+                    <option value="paused">Pausado</option>
+                    <option value="completed">Concluído</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                </div>
+              </div>
+              <div className="row" style={{ gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+                <button type="button" className="btn ghost" onClick={close}>Cancelar</button>
+                <button type="submit" className="btn primary" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,21 +2,11 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Pencil, Trash2, UserCheck } from 'lucide-react';
 import { createStakeholderSchema, CreateStakeholderDto } from '@gpg/shared';
 import { stakeholdersApi } from '@/api/stakeholders';
-import { Project, Stakeholder } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import type { Project, Stakeholder } from '@/types';
 
-interface Props {
-  project: Project;
-}
+interface Props { project: Project; }
 
 const engagementLabel: Record<string, string> = {
   unaware: 'Desinformado',
@@ -26,12 +16,24 @@ const engagementLabel: Record<string, string> = {
   leading: 'Líder',
 };
 
-const engagementVariant: Record<string, string> = {
-  unaware: 'secondary',
-  resistant: 'destructive',
-  neutral: 'outline',
-  supportive: 'success',
-  leading: 'default',
+const engagementClass: Record<string, string> = {
+  unaware: 'chip outline xs',
+  resistant: 'chip high xs',
+  neutral: 'chip outline xs',
+  supportive: 'chip done xs',
+  leading: 'chip accent xs',
+};
+
+const inputStyle = {
+  width: '100%',
+  padding: '7px 10px',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
+  background: 'var(--surface-2)',
+  color: 'var(--text)',
+  fontSize: 13,
+  outline: 'none',
+  boxSizing: 'border-box' as const,
 };
 
 export function StakeholdersPage({ project }: Props) {
@@ -54,10 +56,7 @@ export function StakeholdersPage({ project }: Props) {
       editing
         ? stakeholdersApi.update(project.id, editing.id, data)
         : stakeholdersApi.create(project.id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['stakeholders', project.id] });
-      handleClose();
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['stakeholders', project.id] }); handleClose(); },
   });
 
   const deleteMutation = useMutation({
@@ -85,162 +84,138 @@ export function StakeholdersPage({ project }: Props) {
     setOpen(true);
   }
 
-  function handleClose() {
-    setOpen(false);
-    setEditing(null);
-    form.reset();
-  }
+  function handleClose() { setOpen(false); setEditing(null); form.reset(); }
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="page-head">
         <div>
-          <h2 className="text-xl font-bold">Stakeholders</h2>
-          <p className="text-sm text-muted-foreground">Registro de partes interessadas com influência e interesse no projeto.</p>
+          <div className="page-title">Stakeholders · {project.name}</div>
+          <div className="page-sub">Partes interessadas com influência e interesse no projeto</div>
         </div>
-        <Button onClick={() => handleOpen()}>
-          <Plus className="h-4 w-4" />
-          Novo Stakeholder
-        </Button>
+        <button className="btn primary" onClick={() => handleOpen()}>+ Novo Stakeholder</button>
       </div>
 
-      {isLoading && <p className="text-muted-foreground">Carregando...</p>}
-
-      <div className="border rounded-lg overflow-hidden bg-white">
-        {stakeholders.length > 0 ? (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-4 py-2">Nome</th>
-                <th className="px-4 py-2">Função / Organização</th>
-                <th className="px-4 py-2 text-center">Tipo</th>
-                <th className="px-4 py-2 text-center">Influência</th>
-                <th className="px-4 py-2 text-center">Interesse</th>
-                <th className="px-4 py-2">Engajamento</th>
-                <th className="px-4 py-2" />
+      <div className="card" style={{ overflow: 'hidden' }}>
+        {isLoading ? (
+          <div className="faint" style={{ padding: 32, textAlign: 'center' }}>Carregando...</div>
+        ) : (stakeholders as Stakeholder[]).length === 0 ? (
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)' }}>
+            <div style={{ marginBottom: 10 }}>Nenhum stakeholder cadastrado.</div>
+            <button className="btn primary" onClick={() => handleOpen()}>Adicionar stakeholder</button>
+          </div>
+        ) : (
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Função / Organização</th>
+                <th>Tipo</th>
+                <th>Influência</th>
+                <th>Interesse</th>
+                <th>Engajamento</th>
+                <th style={{ width: 80 }} />
               </tr>
             </thead>
             <tbody>
-              {stakeholders.map((s) => (
-                <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="px-4 py-2 font-medium">{s.name}</td>
-                  <td className="px-4 py-2 text-muted-foreground">
-                    {[s.role, s.organization].filter(Boolean).join(' / ') || '—'}
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <Badge variant={s.type === 'internal' ? 'default' : 'outline'}>
+              {(stakeholders as Stakeholder[]).map((s) => (
+                <tr key={s.id}>
+                  <td className="b">{s.name}</td>
+                  <td className="faint xs">{[s.role, s.organization].filter(Boolean).join(' / ') || '—'}</td>
+                  <td>
+                    <span className={`chip xs ${s.type === 'internal' ? 'accent' : 'outline'}`}>
                       {s.type === 'internal' ? 'Interno' : 'Externo'}
-                    </Badge>
+                    </span>
                   </td>
-                  <td className="px-4 py-2 text-center">
-                    <InfluenceBar value={s.influence} />
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <InfluenceBar value={s.interest} />
-                  </td>
-                  <td className="px-4 py-2">
-                    <Badge variant={engagementVariant[s.engagementLevel] as 'default' | 'secondary' | 'destructive' | 'outline' | 'success'}>
+                  <td><DotsBar value={s.influence} /></td>
+                  <td><DotsBar value={s.interest} /></td>
+                  <td>
+                    <span className={engagementClass[s.engagementLevel] ?? 'chip xs outline'}>
                       {engagementLabel[s.engagementLevel] ?? s.engagementLevel}
-                    </Badge>
+                    </span>
                   </td>
-                  <td className="px-4 py-2">
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpen(s)}>
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                        if (confirm('Excluir stakeholder?')) deleteMutation.mutate(s.id);
-                      }}>
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
+                  <td>
+                    <div className="row" style={{ gap: 4, justifyContent: 'flex-end' }}>
+                      <button className="btn ghost sm" onClick={() => handleOpen(s)}>Editar</button>
+                      <button className="btn ghost sm" style={{ color: 'var(--danger)' }} onClick={() => { if (confirm('Excluir stakeholder?')) deleteMutation.mutate(s.id); }}>✕</button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        ) : (
-          !isLoading && (
-            <div className="text-center py-12 text-muted-foreground">
-              <UserCheck className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p>Nenhum stakeholder cadastrado.</p>
-              <Button variant="outline" className="mt-3" onClick={() => handleOpen()}>Adicionar stakeholder</Button>
-            </div>
-          )
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Editar Stakeholder' : 'Novo Stakeholder'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={form.handleSubmit((d) => saveMutation.mutate(d))} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1 col-span-2">
-                <Label>Nome *</Label>
-                <Input {...form.register('name')} placeholder="Nome completo" />
-              </div>
-              <div className="space-y-1">
-                <Label>Função / Cargo</Label>
-                <Input {...form.register('role')} placeholder="Ex: Diretor de TI" />
-              </div>
-              <div className="space-y-1">
-                <Label>Organização</Label>
-                <Input {...form.register('organization')} placeholder="Ex: Empresa XYZ" />
-              </div>
-              <div className="space-y-1">
-                <Label>Contato</Label>
-                <Input {...form.register('contactInfo')} placeholder="Email ou telefone" />
-              </div>
-              <div className="space-y-1">
-                <Label>Tipo</Label>
-                <Select value={form.watch('type')} onValueChange={(v) => form.setValue('type', v as 'internal' | 'external')}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="internal">Interno</SelectItem>
-                    <SelectItem value="external">Externo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Engajamento</Label>
-                <Select value={form.watch('engagementLevel')} onValueChange={(v) => form.setValue('engagementLevel', v as CreateStakeholderDto['engagementLevel'])}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(engagementLabel).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Influência (1–5)</Label>
-                <Input type="number" min={1} max={5} {...form.register('influence', { valueAsNumber: true })} />
-              </div>
-              <div className="space-y-1">
-                <Label>Interesse (1–5)</Label>
-                <Input type="number" min={1} max={5} {...form.register('interest', { valueAsNumber: true })} />
-              </div>
+      {/* Modal */}
+      {open && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'grid', placeItems: 'center', zIndex: 100 }}
+          onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+          <div className="card" style={{ width: 480, padding: 24 }} onClick={(e) => e.stopPropagation()}>
+            <div className="card-head" style={{ marginBottom: 16 }}>
+              <div className="card-title">{editing ? 'Editar Stakeholder' : 'Novo Stakeholder'}</div>
+              <button className="btn ghost sm" onClick={handleClose}>✕</button>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <form onSubmit={form.handleSubmit((d) => saveMutation.mutate(d))}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Nome *</label>
+                  <input style={inputStyle} {...form.register('name')} placeholder="Nome completo" />
+                  {form.formState.errors.name && <div style={{ color: 'var(--danger)', fontSize: 11, marginTop: 3 }}>{form.formState.errors.name.message}</div>}
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Função / Cargo</label>
+                  <input style={inputStyle} {...form.register('role')} placeholder="Ex: Diretor de TI" />
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Organização</label>
+                  <input style={inputStyle} {...form.register('organization')} placeholder="Ex: Empresa XYZ" />
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Contato</label>
+                  <input style={inputStyle} {...form.register('contactInfo')} placeholder="Email ou telefone" />
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Tipo</label>
+                  <select style={inputStyle} {...form.register('type')}>
+                    <option value="internal">Interno</option>
+                    <option value="external">Externo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Engajamento</label>
+                  <select style={inputStyle} {...form.register('engagementLevel')}>
+                    {Object.entries(engagementLabel).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Influência (1–5)</label>
+                  <input type="number" min={1} max={5} style={inputStyle} {...form.register('influence', { valueAsNumber: true })} />
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Interesse (1–5)</label>
+                  <input type="number" min={1} max={5} style={inputStyle} {...form.register('interest', { valueAsNumber: true })} />
+                </div>
+              </div>
+              <div className="row" style={{ gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+                <button type="button" className="btn ghost" onClick={handleClose}>Cancelar</button>
+                <button type="submit" className="btn primary" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function InfluenceBar({ value }: { value: number }) {
+function DotsBar({ value }: { value: number }) {
   return (
-    <div className="flex gap-0.5 justify-center">
+    <div className="row" style={{ gap: 3 }}>
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className={cn('w-2 h-2 rounded-full', i < value ? 'bg-primary' : 'bg-gray-200')} />
+        <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i < value ? 'var(--accent)' : 'var(--border-strong)' }} />
       ))}
     </div>
   );

@@ -4,28 +4,22 @@ import { cn } from '../../lib/utils';
 interface AvatarProps {
   initials: string;
   colorIndex?: number;
-  size?: 'sm' | 'md' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ 
-  initials, 
-  colorIndex = 0, 
+export const Avatar: React.FC<AvatarProps> = ({
+  initials,
+  colorIndex = 0,
   size = 'md',
-  className 
+  className,
 }) => {
-  // Cores definidas no index.css (av-c1 até av-c6)
-  const colorClass = colorIndex === 8 ? 'av-c8' : `av-c${(colorIndex % 6) + 1}`;
-  
+  const colorClass = `av-c${(Math.abs(colorIndex) % 8) + 1}`;
+  const sizeClass = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : size === 'xl' ? 'xl' : '';
+
   return (
-    <div className={cn(
-      'av',
-      colorClass,
-      size === 'sm' && 'av.sm',
-      size === 'xl' && 'av.xl',
-      className
-    )}>
-      {initials.toUpperCase()}
+    <div className={cn('av', colorClass, sizeClass, className)}>
+      {initials.slice(0, 2).toUpperCase()}
     </div>
   );
 };

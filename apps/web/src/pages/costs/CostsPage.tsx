@@ -2,81 +2,61 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { KPI } from '../../components/ui/KPI';
-import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { BurndownChart } from '../../components/ui/BurndownChart';
 import { Avatar } from '../../components/ui/Avatar';
 import { costsApi } from '../../api/costs';
 import { membersApi } from '../../api/members';
 import { stagesApi } from '../../api/stages';
 import { formatCurrency, formatDate } from '../../lib/utils';
-import { Plus, Download, AlertTriangle, Trash2, X, Check } from 'lucide-react';
 import type { Project, CostEntry, CostSummary } from '../../types';
 
-interface CostsPageProps {
-  project: Project;
-}
-
+interface CostsPageProps { project: Project; }
 const CATEGORIES = ['Pessoal', 'Ferramentas', 'Infraestrutura', 'Freelancers', 'Outros'];
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '5px 8px', border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5,
+};
 
 export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
 
-  const { data: entries = [], isLoading } = useQuery({
+  const { data: entries = [] } = useQuery({
     queryKey: ['costs', project.id],
     queryFn: () => costsApi.list(project.id),
   });
-
   const { data: summary } = useQuery<CostSummary>({
     queryKey: ['costs', project.id, 'summary'],
     queryFn: () => costsApi.summary(project.id),
   });
-
-  const createMutation = useMutation({
-    mutationFn: (data: any) => costsApi.create(project.id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['costs', project.id] });
-      setShowForm(false);
-      reset();
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => costsApi.remove(project.id, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['costs', project.id] }),
-  });
-
   const { data: members = [] } = useQuery({
     queryKey: ['members', project.id],
     queryFn: () => membersApi.list(project.id),
   });
-
   const { data: stages = [] } = useQuery({
     queryKey: ['stages', project.id],
     queryFn: () => stagesApi.list(project.id),
   });
 
-  const { register, handleSubmit, reset } = useForm({
-    defaultValues: {
-      description: '',
-      category: 'Pessoal',
-      amount: 0,
-      hours: '',
-      date: new Date().toISOString().slice(0, 10),
-      memberId: '',
-      stageId: '',
-    },
+  const createMutation = useMutation({
+    mutationFn: (data: any) => costsApi.create(project.id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['costs', project.id] }); setShowForm(false); reset(); },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => costsApi.remove(project.id, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['costs', project.id] }),
   });
 
-  if (isLoading) return <div className="muted p-8 text-center">Carregando finanças...</div>;
+  const { register, handleSubmit, reset } = useForm({
+    defaultValues: { description: '', category: 'Pessoal', amount: 0, hours: '', date: new Date().toISOString().slice(0, 10), professionalId: '', stageId: '' },
+  });
 
   const totalSpent = summary?.totalSpent ?? 0;
   const budget = Number(project.totalBudget) || 0;
   const balance = budget - totalSpent;
   const burnRate = budget > 0 ? (totalSpent / budget) * 100 : 0;
 
-  // Burndown: acumular lançamentos por mês a partir da data de início
-  const projectStart = new Date(project.startDate);
+  // Burndown chart data
   const monthsMap: Record<string, number> = {};
   (entries as CostEntry[]).forEach((e) => {
     const d = new Date(e.date);
@@ -85,240 +65,244 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
   });
   const months = Object.keys(monthsMap).sort();
   let acc = 0;
-  const chartData = months.length > 0
-    ? [0, ...months.map((m) => { acc += monthsMap[m]; return acc; })]
-    : [0, 0];
-
-  // Ideal: orçamento dividido linearmente pelos meses totais do projeto
+  const chartData = [0, ...months.map((m) => { acc += monthsMap[m]; return acc; })];
   const totalMonths = Math.max(months.length, 1);
   const idealStep = budget / totalMonths;
   const idealData = Array.from({ length: chartData.length }, (_, i) => idealStep * i);
 
-  const avgHourlyRate = entries.length > 0
-    ? entries
-        .filter((e: CostEntry) => e.hours && e.hours > 0)
-        .reduce((acc: number, e: CostEntry) => acc + Number(e.amount) / (e.hours!), 0) /
-      Math.max(entries.filter((e: CostEntry) => e.hours && e.hours > 0).length, 1)
-    : 0;
-
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-4 gap-4">
-        <KPI
-          label="Total Gasto"
-          value={formatCurrency(totalSpent)}
-          sub={budget > 0 ? `de ${formatCurrency(budget)}` : 'Sem orçamento definido'}
-          delta={budget > 0 ? { value: `${Math.round(burnRate)}%`, trend: burnRate > 80 ? 'down' : 'flat' } : undefined}
-        />
-        <KPI
-          label="Saldo Restante"
-          value={formatCurrency(balance)}
-          sub="Orçamento disponível"
-          delta={balance < 0 ? { value: 'Negativo', trend: 'down' } : undefined}
-        />
-        <KPI
-          label="Custo Médio/h"
-          value={avgHourlyRate > 0 ? formatCurrency(avgHourlyRate) : '—'}
-          sub="Baseado nos lançamentos com horas"
-        />
-        <KPI
-          label="Lançamentos"
-          value={String(entries.length)}
-          sub={`${(summary?.count ?? 0)} registros`}
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-6">
-        <Card className="col-span-2">
-          <CardHeader title="Burndown Financeiro" subtitle="Realizado acumulado vs Ideal">
-            <div className="row gap-2">
-              <span className="row gap-1 xs muted"><span className="w-2 h-2 rounded-full bg-accent inline-block" /> Real</span>
-              <span className="row gap-1 xs muted"><span className="w-2 h-2 border border-dashed border-text-3 rounded-full inline-block" /> Ideal</span>
-            </div>
-          </CardHeader>
-          <CardBody>
-            {chartData.length > 1 ? (
-              <>
-                <BurndownChart data={chartData} ideal={idealData} height={240} />
-                <div className="mt-4 row between xs muted uppercase tracking-widest font-bold px-4">
-                  {months.map((m) => <span key={m}>{m.slice(5)}/{m.slice(2, 4)}</span>)}
-                </div>
-              </>
-            ) : (
-              <div className="muted italic text-center py-12">Registre lançamentos para ver o burndown.</div>
-            )}
-          </CardBody>
-        </Card>
-
-        <div className="flex flex-col gap-4">
-          {burnRate > 80 && (
-            <Card className="bg-warning-soft border-warning/20">
-              <CardBody className="row gap-3">
-                <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center text-warning flex-shrink-0">
-                  <AlertTriangle size={20} />
-                </div>
-                <div className="fill">
-                  <div className="small b text-warning">Atenção no Burn Rate</div>
-                  <div className="xs text-warning/80">{Math.round(burnRate)}% do orçamento consumido.</div>
-                </div>
-              </CardBody>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader title="Gastos por Categoria" />
-            <CardBody className="flex flex-col gap-3">
-              {Object.entries(summary?.byCategory ?? {}).length > 0
-                ? Object.entries(summary!.byCategory).map(([cat, val]) => (
-                    <div key={cat} className="col gap-1">
-                      <div className="row between xs muted">
-                        <span className="b">{cat}</span>
-                        <span>{formatCurrency(val as number)}</span>
-                      </div>
-                      <div className="bar fill" style={{ height: 6 }}>
-                        <span style={{ width: `${((val as number) / (totalSpent || 1)) * 100}%` }} />
-                      </div>
-                    </div>
-                  ))
-                : <div className="xs muted italic">Nenhum lançamento ainda.</div>}
-            </CardBody>
-          </Card>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="page-head">
+        <div>
+          <div className="page-title">Custos do projeto</div>
+          <div className="page-sub">Orçamento aprovado · acompanhamento financeiro</div>
+        </div>
+        <div className="row" style={{ gap: 8 }}>
+          <div className="seg">
+            <button className="seg-btn active">Mês</button>
+            <button className="seg-btn">Sem.</button>
+            <button className="seg-btn">Trim.</button>
+          </div>
+          <button className="btn primary" onClick={() => setShowForm(!showForm)}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Novo lançamento
+          </button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader title="Lançamentos" subtitle={`${entries.length} registros`}>
-          <div className="row gap-2">
-            <button className="btn sm"><Download size={14} /> Exportar</button>
-            <button className="btn sm primary" onClick={() => setShowForm(true)}>
-              <Plus size={14} /> Novo Lançamento
-            </button>
-          </div>
-        </CardHeader>
+      <div className="kpi-grid">
+        <KPI label="Orçamento total" value={formatCurrency(budget)} sub="aprovado" />
+        <KPI label="Realizado" value={formatCurrency(totalSpent)}
+          delta={budget > 0 ? { dir: burnRate > 80 ? 'down' : 'flat', text: `${Math.round(burnRate)}%` } : undefined}
+          sub="ritmo de consumo" />
+        <KPI label="Saldo estimado" value={formatCurrency(balance)}
+          delta={balance < 0 ? { dir: 'down', text: 'Negativo' } : undefined}
+          sub={balance >= 0 ? 'disponível' : 'deficit'} />
+        <KPI label="Lançamentos" value={String(entries.length)} sub={`${entries.length} registros`} />
+      </div>
 
-        {showForm && (
-          <div className="border-b border-border p-4 bg-surface-2">
-            <form
-              className="flex flex-col gap-3"
-              onSubmit={handleSubmit((d) =>
-                createMutation.mutate({
-                  description: d.description,
-                  category: d.category,
-                  amount: Number(d.amount),
-                  hours: d.hours ? Number(d.hours) : null,
-                  date: d.date || undefined,
-                  memberId: d.memberId || null,
-                  stageId: d.stageId || null,
-                }),
-              )}
-            >
-              <div className="grid grid-cols-4 gap-3">
-                <div className="col gap-1 col-span-2">
-                  <label className="xs muted font-bold uppercase">Descrição *</label>
-                  <input className="input" placeholder="Ex: Horas Lina · UI sistema" {...register('description', { required: true })} />
+      {/* Form */}
+      {showForm && (
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Novo lançamento</div>
+            <button className="icon-btn ghost" onClick={() => { setShowForm(false); reset(); }}>✕</button>
+          </div>
+          <div className="card-body">
+            <form onSubmit={handleSubmit((d) => createMutation.mutate({
+              description: d.description, category: d.category, amount: Number(d.amount),
+              hours: d.hours ? Number(d.hours) : null,
+              date: d.date || undefined, professionalId: d.professionalId || null, stageId: d.stageId || null,
+            }))}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 3 }}>Descrição *</label>
+                  <input style={inputStyle} placeholder="Ex: Horas Lina · UI sistema" {...register('description', { required: true })} />
                 </div>
-                <div className="col gap-1">
-                  <label className="xs muted font-bold uppercase">Categoria</label>
-                  <select className="input" {...register('category')}>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 3 }}>Categoria</label>
+                  <select style={inputStyle} {...register('category')}>
                     {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
                   </select>
                 </div>
-                <div className="col gap-1">
-                  <label className="xs muted font-bold uppercase">Data</label>
-                  <input type="date" className="input" {...register('date')} />
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 3 }}>Valor (R$) *</label>
+                  <input type="number" min={0} step={0.01} style={inputStyle} {...register('amount', { required: true })} />
+                </div>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 3 }}>Data</label>
+                  <input type="date" style={inputStyle} {...register('date')} />
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-3 items-end">
-                <div className="col gap-1">
-                  <label className="xs muted font-bold uppercase">Valor (R$) *</label>
-                  <input type="number" min={0} step={0.01} className="input" {...register('amount', { required: true })} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 3 }}>Horas</label>
+                  <input type="number" min={0} step={0.5} style={inputStyle} placeholder="Opcional" {...register('hours')} />
                 </div>
-                <div className="col gap-1">
-                  <label className="xs muted font-bold uppercase">Horas</label>
-                  <input type="number" min={0} step={0.5} className="input" placeholder="Opcional" {...register('hours')} />
-                </div>
-                <div className="col gap-1">
-                  <label className="xs muted font-bold uppercase">Membro</label>
-                  <select className="input" {...register('memberId')}>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 3 }}>Profissional</label>
+                  <select style={inputStyle} {...register('professionalId')}>
                     <option value="">Nenhum</option>
-                    {(members as any[]).map((m: any) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
+                    {(members as any[]).map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
                 </div>
-                <div className="col gap-1">
-                  <label className="xs muted font-bold uppercase">Etapa</label>
-                  <select className="input" {...register('stageId')}>
+                <div>
+                  <label className="xs faint" style={{ display: 'block', marginBottom: 3 }}>Etapa</label>
+                  <select style={inputStyle} {...register('stageId')}>
                     <option value="">Nenhuma</option>
-                    {(stages as any[]).map((s: any) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
+                    {(stages as any[]).map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>
-              <div className="row gap-2 justify-end">
-                <button type="button" className="btn sm ghost" onClick={() => { setShowForm(false); reset(); }}>
-                  <X size={14} /> Cancelar
-                </button>
-                <button type="submit" disabled={createMutation.isPending} className="btn primary sm">
-                  <Check size={14} /> {createMutation.isPending ? 'Salvando...' : 'Salvar Lançamento'}
+              <div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}>
+                <button type="button" className="btn ghost" onClick={() => { setShowForm(false); reset(); }}>Cancelar</button>
+                <button type="submit" disabled={createMutation.isPending} className="btn primary">
+                  {createMutation.isPending ? 'Salvando...' : 'Salvar lançamento'}
                 </button>
               </div>
             </form>
           </div>
-        )}
+        </div>
+      )}
 
-        <CardBody flush>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>DATA</th>
-                <th>DESCRIÇÃO</th>
-                <th>CATEGORIA</th>
-                <th>RESPONSÁVEL</th>
-                <th className="right">VALOR</th>
-                <th></th>
+      <div className="grid-2" style={{ gap: 12 }}>
+        {/* Burndown chart */}
+        <div className="card" style={{ gridColumn: 'span 2' }}>
+          <div className="card-head">
+            <div className="card-title">Curva financeira</div>
+            <div className="row xs faint" style={{ gap: 12 }}>
+              <span><span style={{ display: 'inline-block', width: 12, height: 2, background: 'var(--text-3)', marginRight: 4 }} />ideal</span>
+              <span><span style={{ display: 'inline-block', width: 12, height: 2, background: 'var(--accent)', marginRight: 4 }} />real</span>
+            </div>
+          </div>
+          <div className="card-body">
+            {chartData.length > 1 ? (
+              <BurndownChart data={chartData} ideal={idealData} height={220} />
+            ) : (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-3)' }}>
+                Registre lançamentos para ver o burndown.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Por categoria */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Por categoria</div>
+            <span className="card-sub">total: {formatCurrency(totalSpent)}</span>
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {Object.entries(summary?.byCategory ?? {}).length > 0
+              ? Object.entries(summary!.byCategory).map(([cat, val]) => (
+                <div key={cat}>
+                  <div className="row between" style={{ marginBottom: 4 }}>
+                    <span className="small b">{cat}</span>
+                    <span className="mono xs">{formatCurrency(val as number)}</span>
+                  </div>
+                  <div className="bar">
+                    <span style={{ width: `${((val as number) / (totalSpent || 1)) * 100}%` }} />
+                  </div>
+                </div>
+              ))
+              : <div className="xs faint" style={{ fontStyle: 'italic' }}>Nenhum lançamento ainda.</div>}
+          </div>
+        </div>
+
+        {/* Alertas financeiros */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Alertas financeiros</div>
+          </div>
+          <div className="card-body flush">
+            {burnRate > 80 && (
+              <div className="list-item" style={{ alignItems: 'flex-start' }}>
+                <div className="icon-circle" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}>!</div>
+                <div className="fill">
+                  <div className="small b">Burn rate alto — {Math.round(burnRate)}%</div>
+                  <div className="xs faint">Projeção indica uso completo antes do prazo.</div>
+                </div>
+              </div>
+            )}
+            {balance < 0 && (
+              <div className="list-item" style={{ alignItems: 'flex-start' }}>
+                <div className="icon-circle" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>!</div>
+                <div className="fill">
+                  <div className="small b">Orçamento estourado</div>
+                  <div className="xs faint">Deficit de {formatCurrency(Math.abs(balance))}.</div>
+                </div>
+              </div>
+            )}
+            {burnRate <= 80 && balance >= 0 && (
+              <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                Sem alertas ativos.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Lançamentos recentes */}
+      <div className="card">
+        <div className="card-head">
+          <div className="card-title">Lançamentos recentes</div>
+          <button className="btn sm ghost">Ver todos</button>
+        </div>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Descrição</th>
+              <th>Etapa</th>
+              <th>Categoria</th>
+              <th>Responsável</th>
+              <th>Horas</th>
+              <th className="right">Valor</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {(entries as CostEntry[]).slice(0, 20).map((entry) => (
+              <tr key={entry.id}>
+                <td className="xs faint mono">{formatDate(entry.date)}</td>
+                <td className="b">{entry.description}</td>
+                <td>{entry.stage && <span className="chip outline xs">{entry.stage.name}</span>}</td>
+                <td><span className="chip outline xs">{entry.category}</span></td>
+                <td>
+                  {entry.professional && (
+                    <div className="row">
+                      <Avatar initials={entry.professional.initials} colorIndex={entry.professional.avatarColor} size="sm" />
+                      <span className="xs b">{entry.professional.name}</span>
+                    </div>
+                  )}
+                </td>
+                <td className="mono xs">{entry.hours ? `${entry.hours}h` : '—'}</td>
+                <td className="right b mono">{formatCurrency(Number(entry.amount))}</td>
+                <td>
+                  <button
+                    className="icon-btn ghost"
+                    onClick={() => window.confirm('Excluir lançamento?') && deleteMutation.mutate(entry.id)}
+                    style={{ color: 'var(--danger)' }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    </svg>
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {(entries as CostEntry[]).map((entry) => (
-                <tr key={entry.id}>
-                  <td className="muted xs mono">{formatDate(entry.date)}</td>
-                  <td>
-                    <div className="b">{entry.description}</div>
-                    {entry.stage && <div className="xs muted">{entry.stage.name}</div>}
-                  </td>
-                  <td><span className="chip outline xs">{entry.category}</span></td>
-                  <td>
-                    {entry.member && (
-                      <div className="row gap-2">
-                        <Avatar initials={entry.member.initials} colorIndex={entry.member.avatarColor} size="sm" />
-                        <span className="xs b">{entry.member.name}</span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="right b mono">{formatCurrency(Number(entry.amount))}</td>
-                  <td className="right">
-                    <button
-                      className="icon-btn ghost"
-                      onClick={() => confirm('Excluir lançamento?') && deleteMutation.mutate(entry.id)}
-                    >
-                      <Trash2 size={13} className="text-danger" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {entries.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-12 text-center muted italic">
-                    Nenhum lançamento registrado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </CardBody>
-      </Card>
+            ))}
+            {entries.length === 0 && (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>
+                  Nenhum lançamento registrado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

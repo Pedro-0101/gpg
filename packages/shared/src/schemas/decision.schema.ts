@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const createDecisionSchema = z.object({
-  memberId: z.string().optional().nullable(),
+  professionalId: z.string().optional().nullable(),
   title: z.string().min(1),
   description: z.string().optional().nullable(),
   dueDate: z.coerce.date().optional().nullable(),

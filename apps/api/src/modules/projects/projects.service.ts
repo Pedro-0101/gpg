@@ -22,11 +22,8 @@ export async function findById(id: string) {
             include: {
               subtopics: {
                 orderBy: { order: 'asc' },
-                include: { 
-                  team: true,
-                  assignments: {
-                    include: { member: true }
-                  }
+                include: {
+                  teams: { include: { team: { include: { professionals: { include: { professional: true } } } } } }
                 },
               },
             },
@@ -40,7 +37,6 @@ export async function findById(id: string) {
       },
       stakeholders: true,
       professionals: true,
-      members: true,
       costs: true,
       risks: true,
       milestones: true,
