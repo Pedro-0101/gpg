@@ -204,29 +204,46 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                   {(stage.topics ?? []).map((topic: any) => {
                     const topicHasBar = topic.startDate && topic.endDate;
                     return (
-                      <div key={topic.id} className="gantt-row topic-row">
-                        <div className="label-cell">
-                          <span style={{ color: 'var(--text-3)', marginRight: 4 }}>#</span>
-                          <span className="truncate small">{topic.name}</span>
-                        </div>
-                        <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
-                          {topicHasBar && (
-                            <div className="gantt-bar accent-bar" style={{ left: getX(topic.startDate), width: getW(topic.startDate, topic.endDate), padding: 0 }}>
-                              {topic.subtopics?.[0] ? (
-                                <Link 
-                                  to={`/projects/${project.id}/stages/${stage.id}/topics/${topic.id}/subtopics/${topic.subtopics[0].id}`}
-                                  className="gantt-bar-link"
-                                  style={{ padding: '0 8px', display: 'flex', alignItems: 'center' }}
-                                >
-                                  {topic.name}
-                                </Link>
-                              ) : (
+                      <React.Fragment key={topic.id}>
+                        <div className="gantt-row topic-row">
+                          <div className="label-cell">
+                            <span style={{ color: 'var(--text-3)', marginRight: 4, marginLeft: 16 }}>#</span>
+                            <span className="truncate small b">{topic.name}</span>
+                          </div>
+                          <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
+                            {topicHasBar && (
+                              <div className="gantt-bar accent-bar" style={{ left: getX(topic.startDate), width: getW(topic.startDate, topic.endDate), padding: 0 }}>
                                 <span style={{ padding: '0 8px' }}>{topic.name}</span>
-                              )}
-                            </div>
-                          )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+
+                        {(topic.subtopics ?? []).map((subtopic: any) => {
+                          const subHasBar = subtopic.startDate && subtopic.endDate;
+                          return (
+                            <div key={subtopic.id} className="gantt-row subtopic-row" style={{ opacity: 0.8 }}>
+                              <div className="label-cell">
+                                <span style={{ color: 'var(--text-3)', marginRight: 4, marginLeft: 32 }}>-</span>
+                                <span className="truncate xs">{subtopic.name}</span>
+                              </div>
+                              <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
+                                {subHasBar && (
+                                  <div className="gantt-bar success-bar" style={{ left: getX(subtopic.startDate), width: getW(subtopic.startDate, subtopic.endDate), padding: 0 }}>
+                                    <Link 
+                                      to={`/projects/${project.id}/stages/${stage.id}/topics/${topic.id}/subtopics/${subtopic.id}`}
+                                      className="gantt-bar-link"
+                                      style={{ padding: '0 8px', display: 'flex', alignItems: 'center', fontSize: 10 }}
+                                    >
+                                      {subtopic.name}
+                                    </Link>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </React.Fragment>
                     );
                   })}
                 </React.Fragment>
