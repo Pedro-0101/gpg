@@ -171,8 +171,8 @@ export function ProfessionalsPage({ project }: Props) {
                       <span style={{ width: `${Math.min(load, 100)}%`, background: load > 100 ? 'var(--danger)' : load > 85 ? 'var(--warning)' : 'var(--accent)' }} />
                     </div>
                     <div className="row between" style={{ marginTop: 4 }}>
-                      <span className="xs faint mono">{m?.activeHours ?? 0}h em aberto</span>
-                      <span className="xs faint mono">cap. {m?.capacityHours ?? 0}h/mês</span>
+                      <span className="xs faint mono">{m?.activeHours ?? 0}h esta semana</span>
+                      <span className="xs faint mono">cap. {m?.capacityHours ?? 0}h/sem</span>
                     </div>
                   </div>
                   <div className="grid-3" style={{ marginTop: 12, gap: 4 }}>
@@ -233,7 +233,7 @@ export function ProfessionalsPage({ project }: Props) {
                       <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 13 }}>{formatCurrency(Number(p.hourlyCost))}</td>
                       <td style={{ textAlign: 'right' }}>
                         <span style={{ color: load > 100 ? 'var(--danger)' : load > 85 ? 'var(--warning)' : 'var(--text)', fontWeight: 600 }}>{load}%</span>
-                        <div className="xs faint mono">{m?.activeHours ?? 0}h / {m?.capacityHours ?? 0}h</div>
+                        <div className="xs faint mono">{m?.activeHours ?? 0}h / {m?.capacityHours ?? 0}h esta semana</div>
                       </td>
                       <td style={{ textAlign: 'right' }}>{m?.activeTasks ?? 0}</td>
                       <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{m?.performance ?? 0}%</td>

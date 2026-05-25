@@ -333,7 +333,7 @@ export const DashboardPage: React.FC = () => {
                     <div className="icon-circle" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}>!</div>
                     <div className="fill">
                       <div className="small b">{m.name} sobrecarregado</div>
-                      <div className="xs faint">{m.loadPercent}% de carga · {m.activeHours}h em aberto / cap. {m.capacityHours}h</div>
+                      <div className="xs faint">{m.loadPercent}% esta semana · {m.activeHours}h / cap. {m.capacityHours}h</div>
                     </div>
                   </div>
                 ))}
