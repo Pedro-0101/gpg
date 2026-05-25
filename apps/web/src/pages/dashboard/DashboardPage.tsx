@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { projectsApi } from '../../api/projects';
 import { membersApi } from '../../api/members';
 import { milestonesApi } from '../../api/risks-milestones';
@@ -8,7 +9,6 @@ import { stagesApi } from '../../api/stages';
 import { KPI } from '../../components/ui/KPI';
 import { Avatar } from '../../components/ui/Avatar';
 import { StatusChip } from '../../components/ui/StatusChip';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { differenceInCalendarDays } from 'date-fns';
 import type { ProjectSummary, MemberMetrics, Milestone } from '../../types';
@@ -19,9 +19,7 @@ export const DashboardPage: React.FC = () => {
     queryFn: projectsApi.summaries,
   });
 
-  // Selected project IDs for KPI aggregation — defaults to all once loaded
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  // Hero project = first selected
   const heroId = selectedIds[0] ?? null;
 
   useEffect(() => {
@@ -54,7 +52,6 @@ export const DashboardPage: React.FC = () => {
     return <div className="faint" style={{ padding: 32, textAlign: 'center' }}>Carregando painel...</div>;
   }
 
-  // ---- Aggregated KPIs across selected projects ----
   const selected = summaries.filter((p) => selectedIds.includes(p.id));
   const activeCount = selected.filter((p) => p.status === 'active').length;
   const totalTasks = selected.reduce((n, p) => n + p.totalTasks, 0);
@@ -66,7 +63,6 @@ export const DashboardPage: React.FC = () => {
   const totalDone = selected.reduce((n, p) => n + p.doneCost, 0);
   const burnRate = totalPlanned > 0 ? Math.round((totalDone / totalPlanned) * 100) : 0;
 
-  // ---- Hero project stats ----
   const heroProgress = heroSummary?.progress ?? 0;
   const heroDone = heroSummary?.doneTasks ?? 0;
   const heroTotal = heroSummary?.totalTasks ?? 0;
@@ -74,18 +70,15 @@ export const DashboardPage: React.FC = () => {
   const heroDeadline = heroSummary?.lastTaskDate ?? heroSummary?.endDate ?? null;
   const daysLeft = heroDeadline ? differenceInCalendarDays(new Date(heroDeadline), new Date()) : null;
 
-  // ---- Overloaded members ----
   const overloadedMembers = (memberMetrics as MemberMetrics[])
     .filter((m) => m.loadPercent > 85)
     .sort((a, b) => b.loadPercent - a.loadPercent);
 
-  // ---- Milestones ----
   const upcomingMilestones = (milestones as Milestone[])
     .filter((m) => m.status === 'pending')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 5);
 
-  // ---- Toggle helpers ----
   function toggleProject(id: string) {
     setSelectedIds((prev) => {
       if (prev.includes(id)) {
@@ -95,17 +88,19 @@ export const DashboardPage: React.FC = () => {
     });
   }
 
-  function setHero(id: string) {
-    setSelectedIds((prev) => {
-      if (!prev.includes(id)) return [id, ...prev];
-      return [id, ...prev.filter((x) => x !== id)];
-    });
+  function rotateHero(direction: 1 | -1) {
+    if (selectedIds.length <= 1) return;
+    const currentIndex = selectedIds.indexOf(heroId || '');
+    let nextIndex = (currentIndex + direction + selectedIds.length) % selectedIds.length;
+    if (nextIndex === -1) nextIndex = selectedIds.length - 1;
+    
+    const nextId = selectedIds[nextIndex];
+    setSelectedIds((prev) => [nextId, ...prev.filter((id) => id !== nextId)]);
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* Header + project selector */}
       <div className="page-head" style={{ alignItems: 'flex-start', gap: 12 }}>
         <div>
           <div className="page-title">Dashboard</div>
@@ -118,67 +113,76 @@ export const DashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* Project selector */}
       {summaries.length > 0 && (
         <div className="card" style={{ padding: '12px 16px' }}>
-          <div className="row" style={{ gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <span className="xs faint" style={{ flexShrink: 0 }}>Projetos:</span>
-              {summaries.map((p) => {
-                const isSelected = selectedIds.includes(p.id);
-                const isHero = p.id === heroId;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => toggleProject(p.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '4px 10px', borderRadius: 'var(--radius)',
-                      border: `1.5px solid ${isSelected ? p.color || 'var(--accent)' : 'var(--border)'}`,
-                      background: isSelected ? `color-mix(in srgb, ${p.color || 'var(--accent)'} 12%, transparent)` : 'transparent',
-                      color: isSelected ? 'var(--text)' : 'var(--text-3)',
-                      cursor: 'pointer', fontSize: 13, fontWeight: isSelected ? 600 : 400,
-                    }}
-                  >
-                    <span style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: isSelected ? (p.color || 'var(--accent)') : 'var(--border)',
-                      flexShrink: 0,
-                    }} />
-                    {p.name}
-                    {isHero && <span style={{ fontSize: 10, color: p.color || 'var(--accent)', fontWeight: 700 }}>★</span>}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setSelectedIds(summaries.map((p) => p.id))}
-                style={{ padding: '4px 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--text-3)' }}
-              >
-                Selecionar todos
-              </button>
-            </div>
-
-            <div className="row" style={{ gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
-              <span className="xs faint" style={{ flexShrink: 0 }}>Principal:</span>
-              <Select value={heroId || ''} onValueChange={setHero}>
-                <SelectTrigger className="w-[180px] h-8">
-                  <SelectValue placeholder="Escolha" />
-                </SelectTrigger>
-                <SelectContent>
-                  {summaries.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span className="xs faint" style={{ flexShrink: 0 }}>Projetos:</span>
+            {summaries.map((p) => {
+              const isSelected = selectedIds.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => toggleProject(p.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '4px 10px', borderRadius: 'var(--radius)',
+                    border: `1.5px solid ${isSelected ? p.color || 'var(--accent)' : 'var(--border)'}`,
+                    background: isSelected ? `color-mix(in srgb, ${p.color || 'var(--accent)'} 12%, transparent)` : 'transparent',
+                    color: isSelected ? 'var(--text)' : 'var(--text-3)',
+                    cursor: 'pointer', fontSize: 13, fontWeight: isSelected ? 600 : 400,
+                  }}
+                >
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: isSelected ? (p.color || 'var(--accent)') : 'var(--border)',
+                    flexShrink: 0,
+                  }} />
+                  {p.name}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setSelectedIds(summaries.map((p) => p.id))}
+              style={{ padding: '4px 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--text-3)' }}
+            >
+              Selecionar todos
+            </button>
           </div>
         </div>
       )}
 
-      {/* Hero do projeto principal */}
       {heroSummary && (
-        <div className="project-hero">
-          <div className="row" style={{ gap: 16, alignItems: 'flex-start' }}>
+        <div className="project-hero" style={{ 
+          position: 'relative', 
+          transition: 'all 0.3s ease-in-out',
+        }}>
+          {selectedIds.length > 1 && (
+            <>
+              <button 
+                onClick={() => rotateHero(-1)}
+                style={{ 
+                  position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', 
+                  padding: '8px', cursor: 'pointer', background: 'var(--card-bg)', 
+                  border: '1px solid var(--border)', borderRadius: '50%',
+                  display: 'grid', placeItems: 'center', transition: 'transform 0.2s', zIndex: 10
+                }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button 
+                onClick={() => rotateHero(1)}
+                style={{ 
+                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', 
+                  padding: '8px', cursor: 'pointer', background: 'var(--card-bg)', 
+                  border: '1px solid var(--border)', borderRadius: '50%',
+                  display: 'grid', placeItems: 'center', transition: 'transform 0.2s', zIndex: 10
+                }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </>
+          )}
+          <div className="row" style={{ gap: 16, alignItems: 'flex-start', padding: '0 24px' }}>
             <div style={{
               width: 56, height: 56, borderRadius: 12,
               background: `linear-gradient(135deg, ${heroSummary.color || '#4F46E5'}, #7C3AED)`,
@@ -250,7 +254,6 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* KPIs — aggregated across selected */}
       <div className="kpi-grid">
         <KPI
           label="Projetos selecionados"
@@ -289,9 +292,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       <div className="grid-2" style={{ gap: 12 }}>
-        {/* Coluna esquerda */}
         <div className="col" style={{ gap: 12 }}>
-          {/* Tabela de projetos selecionados */}
           <div className="card">
             <div className="card-head">
               <div className="card-title">
@@ -362,7 +363,6 @@ export const DashboardPage: React.FC = () => {
             </table>
           </div>
 
-          {/* Próximos marcos */}
           <div className="card">
             <div className="card-head">
               <div className="card-title">
@@ -393,9 +393,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Coluna direita */}
         <div className="col" style={{ gap: 12 }}>
-          {/* Carga da equipe */}
           {memberMetrics.length > 0 && (
             <div className="card">
               <div className="card-head">
@@ -428,7 +426,6 @@ export const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          {/* Alertas críticos */}
           {(burnRate > 80 || overloadedMembers.length > 0) && (
             <div className="card">
               <div className="card-head">
@@ -458,7 +455,6 @@ export const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          {/* Resumo financeiro agregado */}
           {totalPlanned > 0 && (
             <div className="card">
               <div className="card-head">
