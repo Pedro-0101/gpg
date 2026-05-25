@@ -45,32 +45,49 @@ export async function remove(id: string, projectId: string) {
 }
 
 export async function getMetrics(projectId: string) {
-  const professionals = await prisma.professional.findMany({
-    where: { projectId },
-    include: {
-      teams: {
-        include: {
-          team: {
-            include: {
-              subtopics: { include: { subtopic: true } },
+  const [professionals, project] = await Promise.all([
+    prisma.professional.findMany({
+      where: { projectId },
+      include: {
+        teams: {
+          include: {
+            team: {
+              include: {
+                subtopics: { include: { subtopic: true } },
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.project.findUnique({ where: { id: projectId }, select: { dailyHours: true } }),
+  ]);
+
+  // Monthly capacity in hours: dailyHours × 22 working days
+  const dailyHours = project?.dailyHours ?? 8;
+  const capacityHours = dailyHours * 22;
 
   return professionals.map((prof) => {
-    const subtopics = prof.teams.flatMap((tp) =>
-      tp.team.subtopics.map((st) => st.subtopic),
-    );
+    // Deduplicate subtopics — a professional may be in multiple teams assigned to the same subtopic
+    const subtopicMap = new Map<string, typeof prof.teams[0]['team']['subtopics'][0]['subtopic']>();
+    for (const tp of prof.teams) {
+      for (const st of tp.team.subtopics) {
+        subtopicMap.set(st.subtopic.id, st.subtopic);
+      }
+    }
+    const subtopics = Array.from(subtopicMap.values());
+
     const activeTasks = subtopics.filter((s) => s.status !== 'done').length;
     const completedTasks = subtopics.filter((s) => s.status === 'done').length;
-    const spentHours = subtopics.reduce((acc, s) => acc + (s.spentHours || 0), 0);
+    const activeHours = subtopics
+      .filter((s) => s.status !== 'done')
+      .reduce((acc, s) => acc + (s.durationHours || 0), 0);
+    const spentHours = subtopics.reduce((acc, s) => acc + Number(s.spentHours || 0), 0);
     const estimatedHours = subtopics.reduce((acc, s) => acc + (s.durationHours || 0), 0);
     const total = subtopics.length;
     const performance = total > 0 ? Math.round((completedTasks / total) * 100) : 100;
-    const loadPercent = Math.min(Math.round((activeTasks * 8 / 40) * 100), 120);
+    // Cap at 200 so the UI can display meaningful overload
+    const loadPercent = Math.min(Math.round((activeHours / capacityHours) * 100), 200);
 
     return {
       memberId: prof.id,
@@ -80,6 +97,8 @@ export async function getMetrics(projectId: string) {
       avatarColor: prof.avatarColor,
       activeTasks,
       completedTasks,
+      activeHours,
+      capacityHours,
       loadPercent,
       spentHours,
       estimatedHours,

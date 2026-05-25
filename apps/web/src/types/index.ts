@@ -189,6 +189,8 @@ export interface MemberMetrics {
   avatarColor: number;
   activeTasks: number;
   completedTasks: number;
+  activeHours: number;
+  capacityHours: number;
   loadPercent: number;
   spentHours: number;
   estimatedHours: number;
