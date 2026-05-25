@@ -211,7 +211,11 @@ export const DashboardPage: React.FC = () => {
                 <span className="xs faint">· {heroDone}/{heroTotal} tarefas</span>
               </div>
               {(stages as any[]).length > 0 && (
-                <div className="stepper" style={{ marginTop: 14, flexWrap: 'wrap' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 4, marginTop: 14,
+                  overflowX: 'auto', paddingBottom: 2,
+                  msOverflowStyle: 'none' as any, scrollbarWidth: 'none' as any,
+                }}>
                   {(stages as any[]).map((stage: any, i: number) => {
                     const stageDone = (stage.topics ?? []).every((t: any) =>
                       (t.subtopics ?? []).every((s: any) => s.status === 'done'),
@@ -219,13 +223,26 @@ export const DashboardPage: React.FC = () => {
                     const stagePending = (stage.topics ?? []).some((t: any) =>
                       (t.subtopics ?? []).some((s: any) => s.status === 'inprog'),
                     );
-                    const cls = stageDone ? 'done' : stagePending ? 'current' : '';
+                    const color = stageDone ? '#10B981' : stagePending ? '#4F46E5' : 'var(--text-3)';
+                    const bg    = stageDone ? '#10B98115' : stagePending ? '#4F46E515' : 'var(--surface-2)';
+                    const border = stageDone ? '#10B98140' : stagePending ? '#4F46E540' : 'var(--border)';
                     return (
                       <React.Fragment key={stage.id}>
-                        {i > 0 && <div className="arrow" />}
-                        <div className={`step ${cls}`} style={{ fontSize: 12, padding: '5px 10px' }}>
-                          <span className="xs faint" style={{ fontFamily: 'monospace' }}>E{i + 1}</span>
-                          <span>{stage.name}</span>
+                        {i > 0 && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        )}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                          padding: '4px 10px', borderRadius: 20,
+                          background: bg, border: `1px solid ${border}`,
+                          fontSize: 12, color, fontWeight: stagePending ? 600 : 400,
+                          whiteSpace: 'nowrap',
+                        }}>
+                          <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, opacity: 0.7 }}>E{i + 1}</span>
+                          <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{stage.name}</span>
+                          {stageDone && <span style={{ fontSize: 10 }}>✓</span>}
                         </div>
                       </React.Fragment>
                     );
