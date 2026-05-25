@@ -338,7 +338,7 @@ body.theme-dark .btn.primary { color: #050505; }
 /* --- KPI Grid --- */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 10px;
 }
 .kpi {

@@ -172,7 +172,7 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
     return 'todo';
   }
 
-  const STAGE_COLORS = ['var(--success)', 'var(--accent)', 'var(--text)', 'var(--purple)'];
+  const STAGE_PALETTE = ['#4F46E5', '#10B981', '#0EA5E9', '#F59E0B', '#EF4444', '#7C3AED', '#EC4899', '#06B6D4'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -204,68 +204,8 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
         </div>
       </div>
 
-      {/* KPI + Etapas grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
-        {/* Etapas — span 2 rows */}
-        <div className="card" style={{ gridRow: 'span 2' }}>
-          <div className="card-head">
-            <div className="card-title">Etapas <span className="card-sub">{(project.stages ?? []).length} totais</span></div>
-            <Link to="gantt" className="btn sm ghost">Ver no Gantt</Link>
-          </div>
-          <div className="card-body flush">
-            {(project.stages ?? []).map((stage: any, si: number) => {
-              const tone = STAGE_COLORS[si % STAGE_COLORS.length];
-              const pct = stageProgress(stage);
-              const status = stageStatus(stage);
-              const assignees = (stage.topics ?? [])
-                .flatMap((t: any) => (t.subtopics ?? []).flatMap((s: any) =>
-                  (s.teams ?? []).flatMap((st: any) => st.team?.professionals ?? [])
-                ))
-                .reduce((acc: any[], tp: any) => {
-                  if (!acc.find((x: any) => x.professional?.id === tp.professional?.id)) acc.push(tp);
-                  return acc;
-                }, []).slice(0, 3);
-              return (
-                <div key={stage.id} className="list-item" style={{ padding: '14px 16px', alignItems: 'flex-start' }}>
-                  <span style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: `color-mix(in srgb, ${tone} 12%, transparent)`,
-                    color: tone, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0,
-                  }}>
-                    {status === 'done' ? '✓' : si + 1}
-                  </span>
-                  <div className="fill">
-                    <div className="row" style={{ gap: 6 }}>
-                      <span className="b">{stage.name}</span>
-                      <StatusChip status={status} />
-                    </div>
-                    <div className="xs faint" style={{ marginTop: 2 }}>
-                      {(stage.topics ?? []).length} tópicos · {(stage.topics ?? []).reduce((n: number, t: any) => n + (t.subtopics?.length ?? 0), 0)} tarefas
-                      {stage.endDate && ` · até ${formatDate(stage.endDate)}`}
-                    </div>
-                    <div className="row" style={{ marginTop: 6, gap: 8 }}>
-                      <div className="bar fill">
-                        <span style={{ width: `${pct}%`, background: tone }} />
-                      </div>
-                      <span className="xs b" style={{ minWidth: 32 }}>{pct}%</span>
-                    </div>
-                  </div>
-                  <AvatarStack>
-                    {assignees.length > 0
-                      ? assignees.map((tp: any) => <Avatar key={tp.professional.id} initials={tp.professional.initials} colorIndex={tp.professional.avatarColor} size="sm" />)
-                      : <Avatar initials="?" colorIndex={8} size="sm" />}
-                  </AvatarStack>
-                </div>
-              );
-            })}
-            {(project.stages ?? []).length === 0 && (
-              <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>
-                Nenhuma etapa. <Link to="stages" style={{ color: 'var(--accent)' }}>Criar etapas.</Link>
-              </div>
-            )}
-          </div>
-        </div>
-
+      {/* KPI row */}
+      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <KPI
           label="Orçamento previsto"
           value={formatCurrency(plannedCost)}
@@ -279,6 +219,73 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
         />
         <KPI label="Tarefas abertas" value={totalTasks - completedTasks} sub={`${completedTasks} concluídas`} />
         <KPI label="Equipes alocadas" value={teams.length} sub={`${professionalsCount} profissionais`} />
+      </div>
+
+      {/* Etapas — card grid */}
+      <div className="card">
+        <div className="card-head">
+          <div className="card-title">Etapas <span className="card-sub">{(project.stages ?? []).length} etapas · cada uma destrava a próxima</span></div>
+          <Link to="gantt" className="btn sm ghost">Ver no Gantt →</Link>
+        </div>
+        <div className="card-body">
+          {(project.stages ?? []).length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+              {(project.stages ?? []).map((stage: any, si: number) => {
+                const tone = STAGE_PALETTE[si % STAGE_PALETTE.length];
+                const pct = stageProgress(stage);
+                const status = stageStatus(stage);
+                const taskCount = (stage.topics ?? []).reduce((n: number, t: any) => n + (t.subtopics?.length ?? 0), 0);
+                const topicCount = (stage.topics ?? []).length;
+                return (
+                  <div key={stage.id} style={{
+                    border: `1px solid color-mix(in srgb, ${tone} 25%, var(--border))`,
+                    borderRadius: 8, padding: 14,
+                    background: status === 'inprog'
+                      ? `color-mix(in srgb, ${tone} 5%, var(--surface))`
+                      : 'var(--surface)',
+                    position: 'relative',
+                  }}>
+                    {status === 'inprog' && (
+                      <div style={{
+                        position: 'absolute', top: -8, right: 10,
+                        background: tone, color: 'white',
+                        padding: '1px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                      }}>ATUAL</div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{
+                        width: 24, height: 24, borderRadius: '50%',
+                        background: tone, color: 'white',
+                        display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {status === 'done' ? '✓' : si + 1}
+                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'right' }}>
+                        {stage.startDate && stage.endDate
+                          ? `${formatDate(stage.startDate).slice(0, 5)} → ${formatDate(stage.endDate).slice(0, 5)}`
+                          : ''}
+                      </span>
+                    </div>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginTop: 8, lineHeight: 1.3 }}>{stage.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>
+                      {topicCount} tópicos · {taskCount} tarefas
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
+                      <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: tone, borderRadius: 999 }} />
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 600, minWidth: 28, textAlign: 'right' }}>{pct}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--text-3)' }}>
+              Nenhuma etapa. <Link to="stages" style={{ color: 'var(--accent)' }}>Criar etapas.</Link>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Budget area chart */}

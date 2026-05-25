@@ -7,6 +7,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { costsApi } from '../../api/costs';
 import { membersApi } from '../../api/members';
 import { stagesApi } from '../../api/stages';
+import { calcStageCost } from '../../lib/cost';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import type { Project, CostEntry, CostSummary } from '../../types';
 
@@ -168,6 +169,75 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
         </div>
       )}
 
+      {/* Per-stage budget vs actual */}
+      {(stages as any[]).length > 0 && (() => {
+        const STAGE_COLORS = ['#4F46E5', '#10B981', '#0EA5E9', '#F59E0B', '#EF4444', '#7C3AED', '#EC4899', '#06B6D4'];
+        const stageData = (stages as any[]).map((s: any, i: number) => {
+          const planned = calcStageCost(s);
+          const actual = (entries as CostEntry[])
+            .filter((e) => e.stageId === s.id)
+            .reduce((n, e) => n + Number(e.amount), 0);
+          return { name: s.name, planned, actual, color: STAGE_COLORS[i % STAGE_COLORS.length] };
+        }).filter((s) => s.planned > 0 || s.actual > 0);
+        if (stageData.length === 0) return null;
+        const maxVal = Math.max(...stageData.map((s) => Math.max(s.planned, s.actual)), 1);
+        return (
+          <div className="card">
+            <div className="card-head">
+              <div className="card-title">Orçado vs Realizado · por etapa</div>
+              <div className="row xs faint" style={{ gap: 12 }}>
+                <span className="row" style={{ gap: 4 }}>
+                  <span style={{ width: 12, height: 8, border: '1.5px dashed var(--text-3)', borderRadius: 2, display: 'inline-block' }} />
+                  orçado
+                </span>
+                <span className="row" style={{ gap: 4 }}>
+                  <span style={{ width: 12, height: 8, background: 'var(--accent)', borderRadius: 2, display: 'inline-block' }} />
+                  realizado
+                </span>
+              </div>
+            </div>
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {stageData.map((s, i) => {
+                const pct = s.planned > 0 ? Math.round((s.actual / s.planned) * 100) : 0;
+                const pctColor = pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--success)';
+                return (
+                  <div key={i} style={{ padding: '12px 0', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                    <div className="row between" style={{ marginBottom: 8 }}>
+                      <div className="row" style={{ gap: 6 }}>
+                        <span className="chip accent xs">E{i + 1}</span>
+                        <span className="b small">{s.name}</span>
+                      </div>
+                      <div className="row" style={{ gap: 8 }}>
+                        <span className="mono xs">
+                          <b>{formatCurrency(s.actual)}</b>
+                          <span className="faint"> / {formatCurrency(s.planned)}</span>
+                        </span>
+                        <span className="chip xs" style={{ background: `color-mix(in srgb, ${pctColor} 15%, transparent)`, color: pctColor, minWidth: 44, justifyContent: 'center' }}>
+                          {pct}%
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ position: 'relative', height: 20 }}>
+                      <div style={{
+                        position: 'absolute', left: 0, top: 5,
+                        width: `${(s.planned / maxVal) * 100}%`,
+                        height: 10, border: '1.5px dashed var(--text-3)',
+                        borderRadius: 3, background: 'transparent',
+                      }} />
+                      <div style={{
+                        position: 'absolute', left: 0, top: 5,
+                        width: `${(s.actual / maxVal) * 100}%`,
+                        height: 10, background: s.color, borderRadius: 3,
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="grid-2" style={{ gap: 12 }}>
         {/* Burndown chart */}
         <div className="card" style={{ gridColumn: 'span 2' }}>
@@ -189,26 +259,63 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
           </div>
         </div>
 
-        {/* Por categoria */}
+        {/* Por categoria — donut */}
         <div className="card">
           <div className="card-head">
-            <div className="card-title">Por categoria</div>
-            <span className="card-sub">total: {formatCurrency(totalSpent)}</span>
+            <div className="card-title">Distribuição por categoria</div>
+            <span className="card-sub">total realizado: {formatCurrency(totalSpent)}</span>
           </div>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {Object.entries(summary?.byCategory ?? {}).length > 0
-              ? Object.entries(summary!.byCategory).map(([cat, val]) => (
-                <div key={cat}>
-                  <div className="row between" style={{ marginBottom: 4 }}>
-                    <span className="small b">{cat}</span>
-                    <span className="mono xs">{formatCurrency(val as number)}</span>
+          <div className="card-body row" style={{ gap: 20, alignItems: 'center' }}>
+            {(() => {
+              const CAT_COLORS: Record<string, string> = {
+                Pessoal: 'var(--accent)',
+                Ferramentas: 'var(--purple)',
+                Infraestrutura: 'var(--success)',
+                Freelancers: 'var(--warning)',
+                Outros: 'var(--text-3)',
+              };
+              const catEntries = Object.entries(summary?.byCategory ?? {}) as [string, number][];
+              if (catEntries.length === 0) {
+                return <div className="xs faint" style={{ fontStyle: 'italic' }}>Nenhum lançamento ainda.</div>;
+              }
+              const total = catEntries.reduce((n, [, v]) => n + v, 0) || 1;
+              const r = 40, cx = 52, cy = 52, circ = 2 * Math.PI * r;
+              let acc = 0;
+              return (
+                <>
+                  <svg viewBox="0 0 104 104" width={104} height={104} style={{ flexShrink: 0 }}>
+                    {catEntries.map(([cat, val], i) => {
+                      const arc = (val / total) * circ;
+                      const rotation = (acc / total) * 360 - 90;
+                      acc += val;
+                      const color = CAT_COLORS[cat] || 'var(--text-3)';
+                      return (
+                        <circle key={cat} cx={cx} cy={cy} r={r}
+                          fill="none" stroke={color} strokeWidth={16}
+                          strokeDasharray={`${arc} ${circ}`}
+                          transform={`rotate(${rotation}, ${cx}, ${cy})`}
+                        />
+                      );
+                    })}
+                    <text x={cx} y={cy + 5} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--text)">
+                      {total >= 1000 ? `R$${Math.round(total / 1000)}k` : `R$${total.toFixed(0)}`}
+                    </text>
+                  </svg>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {catEntries.map(([cat, val]) => (
+                      <div key={cat} className="row" style={{ gap: 8 }}>
+                        <span style={{ width: 10, height: 10, background: CAT_COLORS[cat] || 'var(--text-3)', borderRadius: 3, flexShrink: 0 }} />
+                        <span className="fill small">{cat}</span>
+                        <span className="mono xs b">{formatCurrency(val)}</span>
+                        <span className="xs faint" style={{ width: 36, textAlign: 'right' }}>
+                          {Math.round((val / total) * 100)}%
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="bar">
-                    <span style={{ width: `${((val as number) / (totalSpent || 1)) * 100}%` }} />
-                  </div>
-                </div>
-              ))
-              : <div className="xs faint" style={{ fontStyle: 'italic' }}>Nenhum lançamento ainda.</div>}
+                </>
+              );
+            })()}
           </div>
         </div>
 

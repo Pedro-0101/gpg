@@ -1,0 +1,120 @@
+﻿etapa,topico,subtopico,tempo,tipo,equipes
+Iniciação,Definir claramente o objetivo do projeto e dos resultados esperados,Elaborar a Declaração de Escopo Preliminar,10,Sequencial,Gerente de Projeto
+Iniciação,Contratar areas para iniciar o projeto,Contratando para areas do projeto,80,Sequencial,Gerente de Projeto+RH
+Iniciação,Definir claramente o objetivo do projeto e dos resultados esperados,Documentar as restrições e premissas iniciais (incluindo requisitos de conformidade multinacional),80,Concomitante,Administrativo+Jurídico (consultoria)+Financeiro+Gerente de Projeto
+Iniciação,"Identificar as partes interessadas (clientes, equipe, fornecedores, parceiros)","Criar o registro das partes interessadas, detalhando seus papéis e expectativas",12,Sequencial,Gerente de Projeto
+Iniciação,"Identificar as partes interessadas (clientes, equipe, fornecedores, parceiros)",Definir a estratégia de comunicação inicial,4,Concomitante,Gerente de Projeto
+Planejamento,Definição do escopo do projeto (o que será entregue e o que não será),Elaboração da Declaração do Escopo,40,Sequencial,Gerente de Projeto+Analista de Sistemas+TechLead
+Planejamento,Criação da Estrutura Analítica do Projeto (EAP/WBS),Criação da Estrutura Analítica do Projeto (EAP/WBS),20,Sequencial,Gerente de Projeto+TechLead
+Planejamento,Validação e aprovação do escopo com stakeholders,Validação e aprovação do escopo com stakeholders,20,Sequencial,Gerente de Projeto
+Planejamento,"Estruturação do cronograma com prazos, etapas e marcos principais",Definição e sequenciamento das atividades,30,Sequencial,Gerente de Projeto+TechLead
+Planejamento,"Estruturação do cronograma com prazos, etapas e marcos principais",Estimativa de duração das atividades e recursos necessários,20,Sequencial,Gerente de Projeto+TechLead
+Planejamento,"Estruturação do cronograma com prazos, etapas e marcos principais",Desenvolvimento e validação do cronograma (diagrama de Gantt),12,Sequencial,Gerente de Projeto
+Planejamento,"Planejamento financeiro, incluindo orçamento, custos previstos e controle de gastos",Estimativa de custos detalhada por atividade/pacote de trabalho (considerando custos de localização e conformidade),50,Sequencial,Gerente de Projeto+Financeiro
+Planejamento,"Planejamento financeiro, incluindo orçamento, custos previstos e controle de gastos",Definição da linha de base de custo (orçamento aprovado),8,Sequencial,Financeiro
+Planejamento,"Planejamento financeiro, incluindo orçamento, custos previstos e controle de gastos",Estabelecimento de mecanismos de controle de custos e relatórios de desempenho,10,Sequencial,Gerente de Projeto+Financeiro
+Planejamento,"Identificação e análise de riscos, com estratégias de mitigação","Registro de riscos potenciais (Registro de Riscos), com foco em regulamentações e câmbio",40,Sequencial,Gerente de Projeto+Jurídico (consultoria)
+Planejamento,"Identificação e análise de riscos, com estratégias de mitigação",Análise qualitativa e quantitativa dos riscos,18,Sequencial,Gerente de Projeto
+Planejamento,"Identificação e análise de riscos, com estratégias de mitigação",Desenvolvimento de planos de resposta a riscos,14,Sequencial,Gerente de Projeto
+Planejamento,Definição de padrões de qualidade e critérios de aceitação,Estabelecimento de métricas e indicadores de qualidade (incluindo precisão em câmbio e impostos),30,Sequencial,Gerente de Projeto+TechLead
+Planejamento,Definição de padrões de qualidade e critérios de aceitação,Criação do Plano de Gestão da Qualidade,10,Sequencial,Gerente de Projeto
+Planejamento,Definição de padrões de qualidade e critérios de aceitação,Definição dos procedimentos de verificação e validação das entregas,12,Sequencial,Gerente de Projeto+TechLead
+Levantamento de necessidades,Identificação das principais demandas e expectativas dos envolvidos (incluindo usuários em diferentes países),Reuniões e entrevistas com stakeholders,60,Sequencial,Gerente de Projeto+Financeiro+Stakeholders+TechLead
+Levantamento de necessidades,Identificação das principais demandas e expectativas dos envolvidos (incluindo usuários em diferentes países),Análise de documentos e processos existentes (incluindo legislação financeira de países-alvo),90,Sequencial,Analista de Sistemas+Financeiro
+Levantamento de necessidades,Identificação das principais demandas e expectativas dos envolvidos (incluindo usuários em diferentes países),Mapeamento de desafios e oportunidades,30,Sequencial,Gerente de Projeto+Analista de Sistemas+Financeiro
+Levantamento de necessidades,Definição das entregas principais do projeto,"Especificação de produtos, serviços ou resultados esperados",55,Sequencial,Gerente de Projeto+Analista de Sistemas+TechLead
+Levantamento de necessidades,Definição das entregas principais do projeto,Estabelecimento de critérios de aceitação,24,Sequencial,Gerente de Projeto+QA (Quality Assurance)+Analista de Sistemas
+Levantamento de necessidades,Definição das entregas principais do projeto,Determinação do escopo inicial,16,Sequencial,Gerente de Projeto+Analista de Sistemas
+Levantamento de necessidades,Definição das entregas principais do projeto,Priorização MVP,20,Concomitante,Gerente de Projeto
+Levantamento de necessidades,Estabelecimento de requisitos operacionais e restrições do projeto,"Requisitos técnicos (ex: infraestrutura, sistemas, APIs bancárias)",45,Sequencial,TechLead+Desenvolvedor Back-end
+Levantamento de necessidades,Estabelecimento de requisitos operacionais e restrições do projeto,Requisitos de prazo e orçamento,12,Concomitante,Gerente de Projeto+Administrativo
+Levantamento de necessidades,Estabelecimento de requisitos operacionais e restrições do projeto,Restrições legais e regulatórias (detalhamento por país),90,Sequencial,Jurídico (consultoria)
+Levantamento de necessidades,Estabelecimento de requisitos operacionais e restrições do projeto,Mapeamento de provedores Open Finance,35,Concomitante,Financeiro+TechLead
+Levantamento de necessidades,"Consideração de aspectos como desempenho, segurança, viabilidade e sustentabilidade",Métricas de desempenho (KPIs),16,Concomitante,Gerente de Projeto
+Levantamento de necessidades,"Consideração de aspectos como desempenho, segurança, viabilidade e sustentabilidade","Avaliação de riscos de segurança e privacidade de dados (ex: GDPR, LGPD)",50,Sequencial,Jurídico (consultoria)
+Levantamento de necessidades,"Consideração de aspectos como desempenho, segurança, viabilidade e sustentabilidade",Análise de custos e benefícios (Viabilidade Econômica Multinacional),40,Concomitante,Financeiro+Administrativo
+Levantamento de necessidades,"Consideração de aspectos como desempenho, segurança, viabilidade e sustentabilidade",Impactos ambientais e sociais,8,Concomitante,Administrativo
+Levantamento de necessidades,Validação das necessidades junto às partes interessadas,Elaboração e apresentação do Termo de Abertura do Projeto (TAP) ou Business Case preliminar,24,Sequencial,Gerente de Projeto
+Levantamento de necessidades,Validação das necessidades junto às partes interessadas,Obtenção de aprovação formal do escopo e requisitos,12,Sequencial,Stakeholders
+Levantamento de necessidades,Validação das necessidades junto às partes interessadas,Comunicação transparente dos objetivos e limites do projeto,8,Concomitante,Gerente de Projeto
+Estruturação do Projeto,Definição da estratégia de execução e organização das atividades,"Análise de metodologias (Ex: Ágil, Cascata, Híbrida)",16,Sequencial,Gerente de Projeto+TechLead
+Estruturação do Projeto,Definição da estratégia de execução e organização das atividades,Definição de marcos e entregáveis principais,24,Sequencial,Gerente de Projeto+TechLead
+Estruturação do Projeto,Definição da estratégia de execução e organização das atividades,Criação de um cronograma de alto nível,20,Sequencial,Gerente de Projeto+TechLead
+Estruturação do Projeto,Definição da estratégia de execução e organização das atividades,Identificação de dependências entre as fases,15,Sequencial,Gerente de Projeto+TechLead
+Estruturação do Projeto,Definição da estratégia de execução e organização das atividades,Mapeamento da trilha crítica,16,Sequencial,Gerente de Projeto+TechLead
+Estruturação do Projeto,Planejamento da experiência e interação com o público/usuário final,Mapeamento da jornada do usuário (User Journey Map),35,Sequencial,Ux+Ui+Gerente de Projeto
+Estruturação do Projeto,Planejamento da experiência e interação com o público/usuário final,Definição das personas (por país/cultura),25,Concomitante,Ux+Ui
+Estruturação do Projeto,Planejamento da experiência e interação com o público/usuário final,Estabelecimento de critérios de usabilidade e acessibilidade,20,Concomitante,Ux+Ui+QA (Quality Assurance)
+Estruturação do Projeto,Planejamento da experiência e interação com o público/usuário final,Criação de wireframes ou esboços de interface (considerando diferentes idiomas e layouts),60,Sequencial,Ux+Ui
+Estruturação do Projeto,"Estruturação dos recursos necessários (humanos, materiais e tecnológicos)",Definição da equipe e alocação de responsabilidades (Matriz RACI),20,Sequencial,Gerente de Projeto+RH+TechLead
+Estruturação do Projeto,"Estruturação dos recursos necessários (humanos, materiais e tecnológicos)",Levantamento de hardware e software (incluindo licenças multinacionais),30,Concomitante,TechLead+DevOps
+Estruturação do Projeto,"Estruturação dos recursos necessários (humanos, materiais e tecnológicos)",Orçamento preliminar dos recursos,16,Concomitante,Gerente de Projeto+Administrativo
+Estruturação do Projeto,"Estruturação dos recursos necessários (humanos, materiais e tecnológicos)",Identificação e contratação de fornecedores externos (ex: consultoria legal/fiscal),40,Sequencial,Administrativo+Jurídico (consultoria)
+Estruturação do Projeto,"Estruturação dos recursos necessários (humanos, materiais e tecnológicos)",Definição estratégia cloud,24,Concomitante,DevOps
+Estruturação do Projeto,"Desenvolvimento de modelos, fluxos ou protótipos para validação das ideias",Criação de provas de conceito (PoC) para funcionalidades críticas (ex: conversão de moeda),70,Sequencial,TechLead+Desenvolvedor Back-end
+Estruturação do Projeto,"Desenvolvimento de modelos, fluxos ou protótipos para validação das ideias",Desenho de fluxogramas detalhados dos processos (incluindo fluxos de conformidade),45,Concomitante,Analista de Sistemas+Financeiro
+Estruturação do Projeto,"Desenvolvimento de modelos, fluxos ou protótipos para validação das ideias",Realização de testes de baixa fidelidade com usuários,24,Sequencial,Ux+Ui
+Estruturação do Projeto,"Desenvolvimento de modelos, fluxos ou protótipos para validação das ideias",Documentação dos requisitos funcionais e não funcionais,70,Sequencial,Analista de Sistemas+TechLead
+Execução,Implementação das atividades planejadas (Desenvolvimento do Sistema),Distribuição de tarefas conforme o cronograma,10,Sequencial,Gerente de Projeto+TechLead
+Execução,Implementação das atividades planejadas (Desenvolvimento do Sistema),"Alocação de recursos necessários (materiais, ferramentas, etc.)",5,Sequencial,Gerente de Projeto+Administrativo+Infra
+Execução,Implementação das atividades planejadas (Desenvolvimento do Sistema),Início efetivo dos trabalhos práticos (Codificação e Integrações),1000,Sequencial,TechLead+Desenvolvedor Back-end+Desenvolvedor Front-end+DevOps
+Execução,Organização das entregas por frentes ou áreas de atuação,Definição de marcos de entrega (milestones) para cada frente,10,Sequencial,Gerente de Projeto+TechLead
+Execução,Organização das entregas por frentes ou áreas de atuação,Garantia da qualidade e aderência aos requisitos em cada área,Contínuo,Sequencial,Analista De Qualidade Qa+QA (Quality Assurance)+TechLead
+Execução,Organização das entregas por frentes ou áreas de atuação,Integração dos resultados das diferentes frentes (incluindo localização),80,Sequencial,TechLead+DevOps+Desenvolvedor Back-end+Desenvolvedor Front-end
+Execução,Gestão da equipe e acompanhamento das tarefas,Realização de reuniões diárias/semanais de status,Contínuo,Concomitante,Gerente de Projeto+TechLead+Equipe Envolvida
+Execução,Gestão da equipe e acompanhamento das tarefas,Identificação e resolução de impedimentos e gargalos,Contínuo,Concomitante,Gerente de Projeto+TechLead+Analista de Sistemas
+Execução,Gestão da equipe e acompanhamento das tarefas,Monitoramento do desempenho individual e coletivo,Contínuo,Concomitante,Gerente de Projeto+RH+TechLead
+Execução,Gestão da equipe e acompanhamento das tarefas,Ajuste e realocação de recursos conforme a necessidade,Contínuo,Concomitante,Gerente de Projeto+RH+Financeiro
+Execução,Comunicação contínua com os envolvidos,Elaboração e envio de relatórios de progresso periódicos,20,Concomitante,Gerente de Projeto+Administrativo
+Execução,Comunicação contínua com os envolvidos,Manutenção de um canal aberto para feedback e esclarecimento de dúvidas,Contínuo,Concomitante,Gerente de Projeto+RH+Suporte Técnico
+Execução,Comunicação contínua com os envolvidos,Comunicação proativa de riscos e desvios ao plano,Contínuo,Concomitante,Gerente de Projeto+TechLead+Jurídico (consultoria)
+Execução,Comunicação contínua com os envolvidos,Realização de apresentações e demos das entregas parciais,40,Concomitante,Gerente de Projeto+TechLead+Design Gráfico+Ux+Ui
+Monitoramento e Controle,Acompanhamento do progresso do projeto em relação ao cronograma,Medição do desempenho das tarefas e marcos,Contínuo,Concomitante,Gerente de Projeto+TechLead
+Monitoramento e Controle,Acompanhamento do progresso do projeto em relação ao cronograma,Análise da aderência ao prazo estipulado,Contínuo,Concomitante,Gerente de Projeto+Analista de Sistemas
+Monitoramento e Controle,Acompanhamento do progresso do projeto em relação ao cronograma,Análise da aderência ao prazo estipulado,20,Concomitante,Gerente de Projeto+Administrativo
+Monitoramento e Controle,Verificação da qualidade das entregas,Realização de inspeções e testes,Contínuo,Concomitante,Analista De Qualidade Qa+QA (Quality Assurance)
+Monitoramento e Controle,Verificação da qualidade das entregas,Validação dos requisitos especificados,Contínuo,Concomitante,Analista De Qualidade Qa+Analista de Sistemas
+Monitoramento e Controle,Verificação da qualidade das entregas,Registro de não conformidades,Contínuo,Concomitante,QA (Quality Assurance)+Analista De Qualidade Qa
+Monitoramento e Controle,Identificação e correção de desvios e problemas,Análise de causa raiz dos desvios,Contínuo,Concomitante,TechLead+Analista de Sistemas+QA (Quality Assurance)
+Monitoramento e Controle,Identificação e correção de desvios e problemas,Definição e implementação de ações corretivas,Contínuo,Concomitante,Gerente de Projeto+TechLead+DevOps
+Monitoramento e Controle,Identificação e correção de desvios e problemas,Gestão de riscos e mitigação (foco em riscos de conformidade),Contínuo,Concomitante,Gerente de Projeto+Jurídico (consultoria)+Financeiro
+Monitoramento e Controle,Ajustes no planejamento quando necessário,Revisão e atualização do cronograma,15,Sequencial,Gerente de Projeto
+Monitoramento e Controle,Ajustes no planejamento quando necessário,Alocação ou realocação de recursos,10,Sequencial,Gerente de Projeto+RH+Financeiro
+Monitoramento e Controle,Ajustes no planejamento quando necessário,Comunicação das mudanças às partes interessadas,8,Sequencial,Gerente de Projeto+Administrativo
+Testes e Validação,Verificação prática das entregas realizadas (testes funcionais),Execução de cenários de teste definidos,120,Sequencial,Analista De Qualidade Qa
+Testes e Validação,Verificação prática das entregas realizadas (testes funcionais),Comparação dos resultados com os requisitos especificados,60,Sequencial,Analista De Qualidade Qa+Analista de Sistemas
+Testes e Validação,Verificação prática das entregas realizadas (testes funcionais),Documentação das evidências de teste,40,Sequencial,Analista De Qualidade Qa
+Testes e Validação,Avaliação da integração entre as diferentes partes do projeto,Testes de integração entre módulos ou sistemas (ex: integração bancária),80,Sequencial,TechLead+Desenvolvedor Back-end+DevOps
+Testes e Validação,Avaliação da integração entre as diferentes partes do projeto,Validação da comunicação e fluxo de dados,30,Sequencial,Analista de Sistemas+TechLead+Desenvolvedor Back-end
+Testes e Validação,Avaliação da integração entre as diferentes partes do projeto,Análise de dependências e interfaces,20,Sequencial,TechLead+Analista de Sistemas+Ux+Ui
+Testes e Validação,Testes de aceitação com usuários ou clientes,Definição de critérios de aceitação,15,Sequencial,Gerente de Projeto+Analista de Sistemas
+Testes e Validação,Testes de aceitação com usuários ou clientes,Condução de testes UAT (User Acceptance Test),100,Sequencial,Gerente de Projeto+Stakeholders
+Testes e Validação,Testes de aceitação com usuários ou clientes,Coleta de feedback e aprovação formal,30,Sequencial,Gerente de Projeto+Administrativo
+Testes e Validação,Correção de falhas identificadas,Classificação e priorização dos defeitos (bugs),20,Sequencial,Gerente de Projeto+TechLead+Analista de Sistemas
+Testes e Validação,Correção de falhas identificadas,Implementação das correções necessárias,80,Sequencial,Desenvolvedor Back-end+Desenvolvedor Front-end+TechLead
+Testes e Validação,Correção de falhas identificadas,Retestes para garantir a resolução e evitar regressão,40,Sequencial,Analista De Qualidade Qa
+Implantação,Preparação do ambiente para entrega final (físico ou operacional),"Verificação de requisitos de infraestrutura (hardware, software, rede).",20,Sequencial,Suporte Técnico+Infra+Infraestrutura
+Implantação,Preparação do ambiente para entrega final (físico ou operacional),Instalação e configuração de servidores/máquinas virtuais.,30,Sequencial,Suporte Técnico+Infra+Infraestrutura+Desenvolvedor Back-end
+Implantação,Preparação do ambiente para entrega final (físico ou operacional),Criação de contas de acesso e perfis de segurança.,30,Sequencial,Infra+Infraestrutura+DevOps+TechLead
+Implantação,Implementação do projeto no contexto real (Go-Live),Instalação da solução/sistema,10,Sequencial,DevOps+Infra+Infraestrutura+TechLead
+Implantação,Implementação do projeto no contexto real (Go-Live),Testes de integração (garantir que todos os componentes funcionem juntos),20,Sequencial,QA (Quality Assurance)+Desenvolvedor Back-end+Desenvolvedor Front-end+Analista de Sistemas
+Implantação,Implementação do projeto no contexto real (Go-Live),Testes de aceite do usuário (UAT) ou testes operacionais,15,Sequencial,QA (Quality Assurance)+Analista de Sistemas+Gerente de Projeto
+Implantação,Configuração inicial e ajustes finais (Localização),"Personalização de parâmetros e regras de negócio (moeda, impostos)",50,Sequencial,Analista de Sistemas+Desenvolvedor Back-end+TechLead
+Implantação,Configuração inicial e ajustes finais (Localização),Ajustes de desempenho e otimização,20,Sequencial,Desenvolvedor Back-end+DevOps+TechLead
+Implantação,Configuração inicial e ajustes finais (Localização),Definição de backups e planos de recuperação de desastres,15,Sequencial,DevOps+Infra+Infraestrutura+TechLead
+Implantação,Configuração inicial e ajustes finais (Localização),Revisão da documentação final,30,Sequencial,Analista de Sistemas+Gerente de Projeto+Administrativo
+Implantação,Treinamento ou orientação dos usuários e responsáveis (por país),"Criação de material de treinamento (manuais, tutoriais, FAQs)",40,Sequencial,Ux+Ui Designer+Design Gráfico+Analista de Sistemas+Suporte Técnico
+Implantação,Treinamento ou orientação dos usuários e responsáveis (por país),Sessões de treinamento (para diferentes grupos de usuários),50,Sequencial,Analista de Sistemas+Suporte Técnico+Gerente de Projeto
+Implantação,Treinamento ou orientação dos usuários e responsáveis (por país),Suporte inicial pós-implantação (go-live support),80,Sequencial,Suporte Técnico+DevOps+QA (Quality Assurance)+Desenvolvedor Back-end
+Implantação,Treinamento ou orientação dos usuários e responsáveis (por país),Transferência de conhecimento para a equipe de suporte/manutenção,20,Sequencial,TechLead+Suporte Técnico+Analista de Sistemas
+Encerramento,Entrega final do projeto conforme acordado,Validação da entrega com o patrocinador,10,Sequencial,Gerente de Projeto+Analista de Sistemas
+Encerramento,Entrega final do projeto conforme acordado,Obtenção da aceitação formal do cliente/patrocinador,5,Sequencial,Gerente de Projeto+Administrativo
+Encerramento,Organização e entrega da documentação,Reunião e arquivamento de todos os documentos do projeto,15,Sequencial,Administrativo+Gerente de Projeto
+Encerramento,Organização e entrega da documentação,Elaboração do relatório final do projeto,20,Sequencial,Gerente de Projeto+Analista de Sistemas
+Encerramento,Organização e entrega da documentação,"Treinamento para transferência de conhecimento, se necessário",10,Sequencial,TechLead+Suporte Técnico
+Encerramento,Avaliação dos resultados obtidos,"Comparação dos resultados com os objetivos iniciais (escopo, prazo, custo)",16,Sequencial,Gerente de Projeto+Analista de Sistemas+Financeiro
+Encerramento,Avaliação dos resultados obtidos,Avaliação da satisfação das partes interessadas,8,Sequencial,Gerente de Projeto+Administrativo
+Encerramento,Registro das lições aprendidas,Documentação das melhores práticas e áreas de melhoria,8,Sequencial,Analista de Sistemas+Gerente de Projeto
+Encerramento,Formalização do encerramento do projeto,"Liberação dos recursos (equipe, equipamentos)",5,Sequencial,RH+Administrativo+Gerente de Projeto
+Encerramento,Formalização do encerramento do projeto,Fechamento de contratos e pagamentos pendentes,10,Sequencial,Financeiro+Jurídico (consultoria)+Administrativo
+Encerramento,Formalização do encerramento do projeto,Comunicação formal do encerramento a todas as partes interessadas,8,Sequencial,Gerente de Projeto+Administrativo

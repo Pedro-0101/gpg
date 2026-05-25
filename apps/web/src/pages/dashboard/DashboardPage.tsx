@@ -9,9 +9,90 @@ import { stagesApi } from '../../api/stages';
 import { KPI } from '../../components/ui/KPI';
 import { Avatar } from '../../components/ui/Avatar';
 import { StatusChip } from '../../components/ui/StatusChip';
+import { ProgressRing } from '../../components/ui/ProgressRing';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { differenceInCalendarDays } from 'date-fns';
 import type { ProjectSummary, MemberMetrics, Milestone } from '../../types';
+
+const TIMELINE_COLORS = ['#4F46E5', '#10B981', '#0EA5E9', '#F59E0B', '#EF4444', '#7C3AED', '#EC4899', '#06B6D4'];
+
+function StageMiniTimeline({ stages }: { stages: any[] }) {
+  const dated = (stages as any[]).filter((s: any) => s.startDate && s.endDate);
+  if (dated.length === 0) return null;
+
+  const minMs = Math.min(...dated.map((s: any) => new Date(s.startDate).getTime()));
+  const maxMs = Math.max(...dated.map((s: any) => new Date(s.endDate).getTime()));
+  const totalMs = maxMs - minMs;
+  if (totalMs <= 0) return null;
+
+  const todayMs = Date.now();
+  const todayPct = Math.max(0, Math.min(100, ((todayMs - minMs) / totalMs) * 100));
+
+  const minDate = new Date(minMs);
+  const maxDate = new Date(maxMs);
+  const monthLabels: string[] = [];
+  const cursor = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  while (cursor <= maxDate) {
+    monthLabels.push(cursor.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return (
+    <div>
+      {/* Month labels */}
+      {monthLabels.length > 1 && (
+        <div style={{ display: 'flex', paddingLeft: 128, marginBottom: 6 }}>
+          {monthLabels.map((m, i) => (
+            <span key={i} style={{
+              flex: 1, fontSize: 10, color: 'var(--text-3)',
+              borderLeft: i > 0 ? '1px dashed var(--border)' : 'none',
+              paddingLeft: 6,
+            }}>{m}</span>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {dated.map((stage: any, i: number) => {
+          const color = TIMELINE_COLORS[i % TIMELINE_COLORS.length];
+          const startPct = ((new Date(stage.startDate).getTime() - minMs) / totalMs) * 100;
+          const endPct = ((new Date(stage.endDate).getTime() - minMs) / totalMs) * 100;
+          const width = Math.max(endPct - startPct, 1);
+          const subs = (stage.topics ?? []).flatMap((t: any) => t.subtopics ?? []);
+          const done = subs.filter((s: any) => s.status === 'done').length;
+
+          return (
+            <div key={stage.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 120, fontSize: 12, fontWeight: 500, color: 'var(--text-2)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                {stage.name}
+              </div>
+              <div style={{ flex: 1, position: 'relative', height: 24 }}>
+                <div style={{
+                  position: 'absolute', left: `${startPct}%`, width: `${width}%`,
+                  height: 22, top: 1, borderRadius: 4,
+                  background: color, opacity: 0.85,
+                  display: 'flex', alignItems: 'center', paddingLeft: 8, overflow: 'hidden', minWidth: 4,
+                }}>
+                  {width > 12 && (
+                    <span style={{ fontSize: 10, color: 'white', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      {subs.length > 0 ? `${done}/${subs.length}` : stage.name.slice(0, 8)}
+                    </span>
+                  )}
+                </div>
+                <div style={{
+                  position: 'absolute', left: `${todayPct}%`, top: -3, bottom: -3,
+                  borderLeft: '1.5px dashed var(--danger)', pointerEvents: 'none',
+                }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export const DashboardPage: React.FC = () => {
   const { data: summaries = [], isLoading } = useQuery<ProjectSummary[]>({
@@ -202,13 +283,8 @@ export const DashboardPage: React.FC = () => {
               <div className="small muted" style={{ marginTop: 2 }}>
                 {heroSummary.description || 'Projeto em andamento'}
               </div>
-              <div className="row" style={{ marginTop: 14, gap: 8 }}>
-                <span className="xs faint">PROGRESSO</span>
-                <div className="bar fill thick">
-                  <span style={{ width: `${heroProgress}%` }} />
-                </div>
-                <span className="b small">{heroProgress}%</span>
-                <span className="xs faint">· {heroDone}/{heroTotal} tarefas</span>
+              <div className="row" style={{ marginTop: 6, gap: 8 }}>
+                <span className="xs faint">{heroDone}/{heroTotal} tarefas concluídas</span>
               </div>
               {(stages as any[]).length > 0 && (
                 <div style={{
@@ -250,23 +326,42 @@ export const DashboardPage: React.FC = () => {
                 </div>
               )}
             </div>
-            <div style={{ flexShrink: 0, textAlign: 'right' }}>
-              <div className="xs faint">DIAS RESTANTES</div>
-              <div style={{
-                fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em',
-                color: daysLeft !== null && daysLeft < 0 ? 'var(--danger)' : 'var(--text)',
-              }}>
-                {daysLeft !== null ? Math.abs(daysLeft) : '—'}
-              </div>
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <ProgressRing progress={heroProgress} size={96} strokeWidth={8} />
               {daysLeft !== null && (
-                <div className="xs faint">
-                  {daysLeft < 0 ? 'dias em atraso' : 'dias até o prazo'}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em',
+                    color: daysLeft < 0 ? 'var(--danger)' : 'var(--text)',
+                  }}>
+                    {Math.abs(daysLeft)}d
+                  </div>
+                  <div className="xs faint">
+                    {daysLeft < 0 ? 'em atraso' : 'restantes'}
+                  </div>
+                  {heroDeadline && (
+                    <div className="xs faint" style={{ marginTop: 1 }}>{formatDate(heroDeadline)}</div>
+                  )}
                 </div>
               )}
-              {heroDeadline && (
-                <div className="xs faint" style={{ marginTop: 2 }}>{formatDate(heroDeadline)}</div>
-              )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {(stages as any[]).length > 0 && (
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">
+              Timeline · etapas
+              {heroSummary && <span className="card-sub">{heroSummary.name}</span>}
+            </div>
+            {heroSummary && (
+              <Link to={`/projects/${heroSummary.id}/gantt`} className="btn sm ghost">Ver Gantt →</Link>
+            )}
+          </div>
+          <div className="card-body" style={{ paddingTop: 8 }}>
+            <StageMiniTimeline stages={stages as any[]} />
           </div>
         </div>
       )}
