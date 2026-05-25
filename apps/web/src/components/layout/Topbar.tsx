@@ -43,7 +43,7 @@ export const Topbar: React.FC = () => {
   return (
     <header className="topbar">
       <div className="bread">
-        <Link to="/" className="crumb">Acme Studio</Link>
+        <Link to="/" className="crumb">GPG</Link>
         {project && (
           <>
             <span className="sep">/</span>

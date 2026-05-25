@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createProjectSchema, CreateProjectDto } from '@gpg/shared';
@@ -23,9 +23,17 @@ const inputStyle = {
 
 export function ProjectsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      open_();
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],

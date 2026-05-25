@@ -72,7 +72,7 @@ export const Sidebar: React.FC = () => {
           dot={p.color || '#4F46E5'}
         />
       ))}
-      <NavLink to="/projects/new" className="sb-item" style={{ opacity: 0.6 }}>
+      <NavLink to="/projects?new=1" className="sb-item" style={{ opacity: 0.6 }}>
         <span className="icon"><SvgIcon d={ICONS.plus} size={13} /></span>
         <span>Novo projeto</span>
       </NavLink>
