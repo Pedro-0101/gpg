@@ -78,23 +78,44 @@ export function parseCsvFile(text: string): CsvRow[] {
   const firstRow = rows[0].map((c) => c.toLowerCase());
   const startIdx = firstRow.some((c) => ['etapa', 'subtopico', 'topico'].includes(c)) ? 1 : 0;
 
-  const result: CsvRow[] = [];
+  // First pass: parse all rows, flagging "Contínuo" entries
+  type RawRow = CsvRow & { continuous: boolean };
+  const raw: RawRow[] = [];
   for (let i = startIdx; i < rows.length; i++) {
     const [etapa = '', topico = '', subtopico = '', tempo = '', tipo = '', equipes = ''] = rows[i];
     if (!etapa || !topico || !subtopico) continue;
-    const isContinuous = /cont[íi]nuo/i.test(tempo.trim());
-    const hours = isContinuous ? 0 : parseInt(tempo, 10);
-    if (!isContinuous && (isNaN(hours) || hours < 0)) continue;
-    result.push({
+    const continuous = /cont[íi]nuo/i.test(tempo.trim());
+    const hours = continuous ? 0 : parseInt(tempo, 10);
+    if (!continuous && (isNaN(hours) || hours < 1)) continue;
+    raw.push({
       etapa: etapa.trim(),
       topico: topico.trim(),
       subtopico: subtopico.trim(),
       tempo: hours,
       tipo: tipo.trim().toLowerCase() === 'concomitante' ? 'concomitante' : 'sequencial',
       equipes: equipes.split('+').map((e) => e.trim()).filter(Boolean),
+      continuous,
     });
   }
-  return result;
+
+  // Second pass: compute each stage's sequential duration (sum of non-continuous, non-concurrent rows)
+  // "Contínuo" rows inherit this duration and become concomitante
+  const stageDuration = new Map<string, number>();
+  for (const row of raw) {
+    if (!row.continuous && row.tipo !== 'concomitante') {
+      const key = row.etapa.toLowerCase();
+      stageDuration.set(key, (stageDuration.get(key) ?? 0) + row.tempo);
+    }
+  }
+
+  return raw.map(({ continuous, ...row }) => {
+    if (!continuous) return row;
+    return {
+      ...row,
+      tempo: stageDuration.get(row.etapa.toLowerCase()) ?? row.tempo,
+      tipo: 'concomitante' as const,
+    };
+  });
 }
 
 export async function importCsvRows(
@@ -256,7 +277,7 @@ export function generateCsv(stages: any[]): string {
           csvEscape(stage.name),
           csvEscape(topic.name),
           csvEscape(sub.name),
-          sub.durationHours === 0 ? 'Contínuo' : String(sub.durationHours),
+          String(sub.durationHours),
           sub.isConcurrent ? 'concomitante' : 'sequencial',
           csvEscape(equipes),
         ].join(','));
