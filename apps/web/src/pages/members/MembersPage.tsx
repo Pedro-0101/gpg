@@ -106,7 +106,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({ project }) => {
                   <div className="xs faint">{member.role}</div>
                   <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                     {member.skills.slice(0, 3).map((s) => (
-                      <span key={s} className="chip outline xs">{s}</span>
+                      <span key={s} className="chip purple xs">{s}</span>
                     ))}
                   </div>
                 </div>

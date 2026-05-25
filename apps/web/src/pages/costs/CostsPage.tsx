@@ -269,8 +269,8 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
               <tr key={entry.id}>
                 <td className="xs faint mono">{formatDate(entry.date)}</td>
                 <td className="b">{entry.description}</td>
-                <td>{entry.stage && <span className="chip outline xs">{entry.stage.name}</span>}</td>
-                <td><span className="chip outline xs">{entry.category}</span></td>
+                <td>{entry.stage && <span className="chip accent xs">{entry.stage.name}</span>}</td>
+                <td><span className="chip accent xs">{entry.category}</span></td>
                 <td>
                   {entry.professional && (
                     <div className="row">

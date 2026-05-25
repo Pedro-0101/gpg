@@ -67,7 +67,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
       <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 24 }}>
         <div className="row" style={{ gap: 8, marginBottom: 12 }}>
           <span className="chip accent">SEMANA {weekNumber}</span>
-          <span className="chip outline xs">{formatDate(today.toISOString())}</span>
+          <span className="chip accent xs">{formatDate(today.toISOString())}</span>
           <span className="xs faint b" style={{ marginLeft: 8, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Status Report</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
             <button className="btn ghost sm">Compartilhar</button>
@@ -176,7 +176,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
                   {d.description && <div className="xs faint">{d.description}</div>}
                 </div>
                 {d.professional && <span className="xs faint">Resp: <strong>{d.professional.name}</strong></span>}
-                {d.dueDate && <span className="chip outline xs">{formatDate(d.dueDate)}</span>}
+                {d.dueDate && <span className="chip accent xs">{formatDate(d.dueDate)}</span>}
+
               </div>
             ))}
           </div>

@@ -17,9 +17,9 @@ const engagementLabel: Record<string, string> = {
 };
 
 const engagementClass: Record<string, string> = {
-  unaware: 'chip outline xs',
+  unaware: 'chip accent xs',
   resistant: 'chip high xs',
-  neutral: 'chip outline xs',
+  neutral: 'chip accent xs',
   supportive: 'chip done xs',
   leading: 'chip accent xs',
 };
@@ -123,7 +123,7 @@ export function StakeholdersPage({ project }: Props) {
                   <td className="b">{s.name}</td>
                   <td className="faint xs">{[s.role, s.organization].filter(Boolean).join(' / ') || '—'}</td>
                   <td>
-                    <span className={`chip xs ${s.type === 'internal' ? 'accent' : 'outline'}`}>
+                    <span className={`chip xs ${s.type === 'internal' ? 'accent' : 'purple'}`}>
                       {s.type === 'internal' ? 'Interno' : 'Externo'}
                     </span>
                   </td>

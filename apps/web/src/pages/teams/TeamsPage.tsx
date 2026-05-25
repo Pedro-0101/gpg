@@ -152,8 +152,8 @@ export function TeamsPage({ project }: Props) {
                   <>
                     <div className="divider" style={{ margin: 0 }} />
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {uniqueSkills.slice(0, 6).map((s) => <span key={s} className="chip outline xs">{s}</span>)}
-                      {uniqueSkills.length > 6 && <span className="chip outline xs faint">+{uniqueSkills.length - 6}</span>}
+                      {uniqueSkills.slice(0, 6).map((s) => <span key={s} className="chip purple xs">{s}</span>)}
+                      {uniqueSkills.length > 6 && <span className="chip purple xs faint">+{uniqueSkills.length - 6}</span>}
                     </div>
                   </>
                 )}
@@ -209,8 +209,8 @@ export function TeamsPage({ project }: Props) {
                     </td>
                     <td>
                       <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
-                        {uniqueSkills.slice(0, 4).map((s) => <span key={s} className="chip outline xs">{s}</span>)}
-                        {uniqueSkills.length > 4 && <span className="chip outline xs faint">+{uniqueSkills.length - 4}</span>}
+                        {uniqueSkills.slice(0, 4).map((s) => <span key={s} className="chip purple xs">{s}</span>)}
+                        {uniqueSkills.length > 4 && <span className="chip purple xs faint">+{uniqueSkills.length - 4}</span>}
                         {uniqueSkills.length === 0 && <span className="xs faint">—</span>}
                       </div>
                     </td>

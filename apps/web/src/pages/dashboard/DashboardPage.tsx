@@ -113,7 +113,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="fill">
               <div className="row" style={{ gap: 6, marginBottom: 6 }}>
-                {mainProject.client && <span className="chip outline xs">{mainProject.client}</span>}
+                {mainProject.client && <span className="chip accent xs">{mainProject.client}</span>}
                 <StatusChip status={mainProject.status || 'active'} />
               </div>
               <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }}>
@@ -261,7 +261,7 @@ export const DashboardPage: React.FC = () => {
             <div className="card-head">
               <div className="card-title">Próximos marcos</div>
               {upcomingMilestones.length > 0 && (
-                <span className="chip outline xs">{upcomingMilestones.length} pendentes</span>
+                <span className="chip accent xs">{upcomingMilestones.length} pendentes</span>
               )}
             </div>
             <div className="card-body flush">

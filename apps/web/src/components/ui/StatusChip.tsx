@@ -17,13 +17,13 @@ const statusMap: Record<string, { label: string; class: string }> = {
   blocked:   { label: 'Bloqueado',     class: 'chip blocked' },
   // Project statuses
   active:    { label: 'Ativo',         class: 'chip accent' },
-  paused:    { label: 'Pausado',       class: 'chip outline' },
+  paused:    { label: 'Pausado',       class: 'chip accent' },
   completed: { label: 'Concluído',     class: 'chip done' },
   cancelled: { label: 'Cancelado',     class: 'chip blocked' },
 };
 
 export const StatusChip: React.FC<StatusChipProps> = ({ status, className }) => {
-  const config = statusMap[status] || { label: status, class: 'chip outline' };
+  const config = statusMap[status] || { label: status, class: 'chip accent' };
   
   return (
     <div className={cn(config.class, className)}>

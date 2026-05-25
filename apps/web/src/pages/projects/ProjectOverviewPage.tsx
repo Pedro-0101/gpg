@@ -70,7 +70,7 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
         </div>
         <div className="fill">
           <div className="row" style={{ gap: 6, marginBottom: 4 }}>
-            {project.client && <span className="chip outline xs">{project.client}</span>}
+            {project.client && <span className="chip accent xs">{project.client}</span>}
             <StatusChip status={project.status || 'active'} />
           </div>
           <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>{project.name}</div>

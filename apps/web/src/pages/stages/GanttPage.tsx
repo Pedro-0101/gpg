@@ -258,7 +258,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
         <div className="card">
           <div className="card-head">
             <div className="card-title">Marcos críticos</div>
-            <span className="chip outline">{(milestones as any[]).length} marcos</span>
+            <span className="chip accent">{(milestones as any[]).length} marcos</span>
           </div>
           <div className="card-body flush">
             {(milestones as any[]).length > 0 ? (
