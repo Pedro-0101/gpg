@@ -8,7 +8,8 @@ import { teamsApi } from '../../api/teams';
 import { StatusChip } from '../../components/ui/StatusChip';
 import { PrioChip } from '../../components/ui/PrioChip';
 import { Avatar, AvatarStack } from '../../components/ui/Avatar';
-import { formatDate } from '../../lib/utils';
+import { formatDate, formatCurrency } from '../../lib/utils';
+import { calcSubtopicCost } from '../../lib/cost';
 import type { SubtopicAttachment, SubtopicComment } from '../../types';
 
 const inp: React.CSSProperties = {
@@ -141,6 +142,7 @@ export const TaskDetailPage: React.FC = () => {
   if (!task) return <div style={{ padding: 32, textAlign: 'center', color: 'var(--danger)' }}>Tarefa não encontrada.</div>;
 
   const professionals = (task.teams ?? []).flatMap((t: any) => t.team?.professionals ?? []);
+  const taskCost = calcSubtopicCost(task);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -181,6 +183,12 @@ export const TaskDetailPage: React.FC = () => {
           <div className="col" style={{ gap: 2 }}>
             <span className="xs faint">GASTO</span>
             <span className="small b" style={{ color: 'var(--accent)' }}>{task.spentHours || 0}h</span>
+          </div>
+          <div className="col" style={{ gap: 2 }}>
+            <span className="xs faint">CUSTO PREVISTO</span>
+            <span className="small b" style={{ color: taskCost > 0 ? 'var(--accent)' : 'var(--text-3)' }}>
+              {taskCost > 0 ? formatCurrency(taskCost) : '—'}
+            </span>
           </div>
           <div className="col" style={{ gap: 2, marginLeft: 'auto' }}>
             <span className="xs faint">RESPONSÁVEIS</span>
@@ -290,6 +298,21 @@ export const TaskDetailPage: React.FC = () => {
               <div className="col" style={{ gap: 4 }}>
                 <span className="xs faint">HORAS GASTAS</span>
                 <span className="small b" style={{ color: 'var(--accent)' }}>{task.spentHours || 0}h</span>
+              </div>
+              <div className="divider" />
+              <div className="col" style={{ gap: 4 }}>
+                <span className="xs faint">CUSTO PREVISTO</span>
+                <span className="small b" style={{ color: taskCost > 0 ? 'var(--accent)' : 'var(--text-3)' }}>
+                  {taskCost > 0 ? formatCurrency(taskCost) : '—'}
+                </span>
+                {taskCost > 0 && (
+                  <span className="xs faint">{task.durationHours}h × R${
+                    ((task.teams ?? []).reduce((s: number, st: any) =>
+                      s + (st.team?.professionals ?? []).reduce((s2: number, tp: any) =>
+                        s2 + Number(tp.professional?.hourlyCost ?? 0), 0), 0)
+                    ).toFixed(0)
+                  }/h</span>
+                )}
               </div>
               <div className="col" style={{ gap: 4 }}>
                 <span className="xs faint">CRIADO EM</span>

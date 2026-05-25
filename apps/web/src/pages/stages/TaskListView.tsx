@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { StatusChip } from '../../components/ui/StatusChip';
 import { PrioChip } from '../../components/ui/PrioChip';
-import { formatDate } from '../../lib/utils';
+import { formatDate, formatCurrency } from '../../lib/utils';
+import { calcSubtopicCost, calcTopicCost, calcStageCost } from '../../lib/cost';
 import { Link, useParams } from 'react-router-dom';
 
 interface TaskListViewProps {
@@ -17,10 +18,9 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
     setCollapsed((p) => ({ ...p, [id]: !p[id] }));
   }
 
-  // Row styling to ensure pixel-perfect alignment across header and rows (excluding responsaveis)
   const rowStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'minmax(260px, 3.5fr) 95px 85px 85px 80px 160px 90px',
+    gridTemplateColumns: 'minmax(260px, 3.5fr) 95px 85px 85px 70px 110px 160px 90px',
     gap: '12px',
     alignItems: 'center',
     padding: '8px 16px',
@@ -34,7 +34,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
         <div style={{ minWidth: '920px' }}>
           {/* Header */}
           <div style={{ ...rowStyle, background: 'var(--surface-2)', borderBottom: '1px solid var(--border-strong)', padding: '10px 16px' }}>
-            {['TAREFA', 'STATUS', 'INÍCIO', 'FIM / PRAZO', 'TEMPO', 'EQUIPES', 'PRIORIDADE'].map((h) => (
+            {['TAREFA', 'STATUS', 'INÍCIO', 'FIM / PRAZO', 'TEMPO', 'CUSTO', 'EQUIPES', 'PRIORIDADE'].map((h) => (
               <div
                 key={h}
                 style={{
@@ -55,11 +55,11 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
             const totalSubs = (stage.topics ?? []).reduce((n: number, t: any) => n + (t.subtopics?.length ?? 0), 0);
             const doneSubs = (stage.topics ?? []).reduce((n: number, t: any) => n + (t.subtopics?.filter((s: any) => s.status === 'done')?.length ?? 0), 0);
 
-            // Aggregate hours for the stage
             const stageDuration = (stage.topics ?? []).reduce(
               (acc: number, t: any) => acc + (t.subtopics ?? []).reduce((acc2: number, s: any) => acc2 + (s.durationHours || 0), 0),
               0
             );
+            const stageCost = calcStageCost(stage);
 
             // Aggregate unique teams for the stage
             const stageTeamsMap = new Map();
@@ -106,7 +106,12 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
                   {/* Column 5: Duration */}
                   <div className="xs b">{stageDuration > 0 ? `${stageDuration}h` : '—'}</div>
 
-                  {/* Column 6: Equipes */}
+                  {/* Column 6: Cost */}
+                  <div className="xs b" style={{ color: stageCost > 0 ? 'var(--accent)' : 'var(--text-3)' }}>
+                    {stageCost > 0 ? formatCurrency(stageCost) : '—'}
+                  </div>
+
+                  {/* Column 7: Equipes */}
                   <div>
                     <div className="row gap-4" style={{ flexWrap: 'wrap' }}>
                       {stageTeams.length > 0 ? (
@@ -126,18 +131,18 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
                     </div>
                   </div>
 
-                  {/* Column 7: Priority */}
+                  {/* Column 8: Priority */}
                   <div />
                 </div>
 
                 {!isCollapsed && (stage.topics ?? []).map((topic: any) => {
                   const topicCollapsed = collapsed[topic.id];
 
-                  // Aggregate hours for the topic
                   const topicDuration = (topic.subtopics ?? []).reduce(
                     (acc: number, s: any) => acc + (s.durationHours || 0),
                     0
                   );
+                  const topicCost = calcTopicCost(topic);
 
                   // Aggregate unique teams for the topic
                   const topicTeamsMap = new Map();
@@ -191,7 +196,12 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
                         {/* Column 5: Duration */}
                         <div className="xs b">{topicDuration > 0 ? `${topicDuration}h` : '—'}</div>
 
-                        {/* Column 6: Equipes */}
+                        {/* Column 6: Cost */}
+                        <div className="xs b" style={{ color: topicCost > 0 ? 'var(--accent)' : 'var(--text-3)' }}>
+                          {topicCost > 0 ? formatCurrency(topicCost) : '—'}
+                        </div>
+
+                        {/* Column 7: Equipes */}
                         <div>
                           <div className="row gap-4" style={{ flexWrap: 'wrap' }}>
                             {topicTeams.length > 0 ? (
@@ -211,67 +221,65 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ project, stages }) =
                           </div>
                         </div>
 
-                        {/* Column 7: Priority */}
+                        {/* Column 8: Priority */}
                         <div />
                       </div>
 
                       {/* Subtopic rows */}
-                      {!topicCollapsed && (topic.subtopics ?? []).map((sub: any) => (
-                        <div key={sub.id} className="outline-row task" style={{ ...rowStyle, borderBottom: '1px solid var(--border)' }}>
-                          {/* Column 1: Task/Subtopic details with padding indentation inside the column */}
-                          <div className="row" style={{ gap: 8, minWidth: 0, paddingLeft: 42 }}>
-                            <span className={`check ${sub.status === 'done' ? 'done' : ''}`} style={{ flexShrink: 0 }} />
-                            <Link
-                              to={`/projects/${projectId}/stages/${stage.id}/topics/${topic.id}/subtopics/${sub.id}`}
-                              className="small b truncate"
-                              style={{ color: 'var(--text)', textDecoration: 'none', flex: 1 }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {sub.name}
-                            </Link>
-                          </div>
-
-                          {/* Column 2: Status */}
-                          <div>
-                            <StatusChip status={sub.status} />
-                          </div>
-
-                          {/* Column 3: Start Date */}
-                          <div className="xs faint">
-                            {sub.startDate ? formatDate(sub.startDate) : '—'}
-                          </div>
-
-                          {/* Column 4: End Date / Deadline */}
-                          <div className="xs faint">
-                            {sub.endDate ? formatDate(sub.endDate) : sub.deadline ? formatDate(sub.deadline) : '—'}
-                          </div>
-
-                          {/* Column 5: Duration */}
-                          <div className="xs b">
-                            {sub.durationHours ? `${sub.durationHours}h` : '—'}
-                          </div>
-
-                          {/* Column 6: Equipes */}
-                          <div>
-                            <div className="row gap-4" style={{ flexWrap: 'wrap' }}>
-                              {(sub.teams ?? []).length > 0 ? (
-                                sub.teams.map((tr: any) => (
-                                  <span key={tr.team.id} className="chip purple xs" style={{ fontSize: 9.5, padding: '2px 6px' }}>
-                                    {tr.team.name}
-                                  </span>
-                                ))
-                              ) : (
-                                <span style={{ color: 'var(--text-3)', fontSize: 11 }}>—</span>
-                              )}
+                      {!topicCollapsed && (topic.subtopics ?? []).map((sub: any) => {
+                        const subCost = calcSubtopicCost(sub);
+                        return (
+                          <div key={sub.id} className="outline-row task" style={{ ...rowStyle, borderBottom: '1px solid var(--border)' }}>
+                            {/* Column 1 */}
+                            <div className="row" style={{ gap: 8, minWidth: 0, paddingLeft: 42 }}>
+                              <span className={`check ${sub.status === 'done' ? 'done' : ''}`} style={{ flexShrink: 0 }} />
+                              <Link
+                                to={`/projects/${projectId}/stages/${stage.id}/topics/${topic.id}/subtopics/${sub.id}`}
+                                className="small b truncate"
+                                style={{ color: 'var(--text)', textDecoration: 'none', flex: 1 }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {sub.name}
+                              </Link>
                             </div>
-                          </div>
 
-                          {/* Column 7: Priority */}
-                          <div>
-                            {sub.priority && <PrioChip priority={sub.priority} />}
+                            {/* Column 2: Status */}
+                            <div><StatusChip status={sub.status} /></div>
+
+                            {/* Column 3: Start Date */}
+                            <div className="xs faint">{sub.startDate ? formatDate(sub.startDate) : '—'}</div>
+
+                            {/* Column 4: End Date / Deadline */}
+                            <div className="xs faint">{sub.endDate ? formatDate(sub.endDate) : sub.deadline ? formatDate(sub.deadline) : '—'}</div>
+
+                            {/* Column 5: Duration */}
+                            <div className="xs b">{sub.durationHours ? `${sub.durationHours}h` : '—'}</div>
+
+                            {/* Column 6: Cost */}
+                            <div className="xs mono" style={{ color: subCost > 0 ? 'var(--text)' : 'var(--text-3)' }}>
+                              {subCost > 0 ? formatCurrency(subCost) : '—'}
+                            </div>
+
+                            {/* Column 7: Equipes */}
+                            <div>
+                              <div className="row gap-4" style={{ flexWrap: 'wrap' }}>
+                                {(sub.teams ?? []).length > 0 ? (
+                                  sub.teams.map((tr: any) => (
+                                    <span key={tr.team.id} className="chip purple xs" style={{ fontSize: 9.5, padding: '2px 6px' }}>
+                                      {tr.team.name}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span style={{ color: 'var(--text-3)', fontSize: 11 }}>—</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Column 8: Priority */}
+                            <div>{sub.priority && <PrioChip priority={sub.priority} />}</div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </React.Fragment>
                   );
                 })}
