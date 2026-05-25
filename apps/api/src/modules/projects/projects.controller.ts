@@ -10,6 +10,14 @@ export async function list(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+export async function summaries(req: Request, res: Response, next: NextFunction) {
+  try {
+    res.json(await service.getSummaries());
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function get(req: Request, res: Response, next: NextFunction) {
   try {
     res.json(await service.findById(req.params.id));

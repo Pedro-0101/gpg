@@ -1,3 +1,20 @@
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  status: string;
+  color: string;
+  client: string | null;
+  description: string | null;
+  startDate: string;
+  endDate: string | null;
+  lastTaskDate: string | null;
+  totalTasks: number;
+  doneTasks: number;
+  progress: number;
+  plannedCost: number;
+  doneCost: number;
+}
+
 export interface Project {
   id: string;
   name: string;

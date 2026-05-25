@@ -67,6 +67,78 @@ export async function remove(id: string) {
   return prisma.project.delete({ where: { id } });
 }
 
+export async function getSummaries() {
+  const projects = await prisma.project.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      stages: {
+        include: {
+          topics: {
+            include: {
+              subtopics: {
+                include: {
+                  teams: {
+                    include: {
+                      team: {
+                        include: {
+                          professionals: { include: { professional: true } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return projects.map((p) => {
+    const subs = p.stages.flatMap((s) => s.topics.flatMap((t) => t.subtopics));
+    const totalTasks = subs.length;
+    const doneTasks = subs.filter((s) => s.status === 'done').length;
+    const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+    let plannedCost = 0;
+    let doneCost = 0;
+    for (const sub of subs) {
+      const costPerHour = (sub as any).teams.reduce((sum: number, st: any) => {
+        return sum + st.team.professionals.reduce((s2: number, tp: any) => {
+          return s2 + Number(tp.professional.hourlyCost ?? 0);
+        }, 0);
+      }, 0);
+      const cost = sub.durationHours * costPerHour;
+      plannedCost += cost;
+      if (sub.status === 'done') doneCost += cost;
+    }
+
+    const lastTaskDate = subs.reduce((max: Date | null, sub) => {
+      const d = sub.endDate;
+      if (!d) return max;
+      return !max || d > max ? d : max;
+    }, null as Date | null);
+
+    return {
+      id: p.id,
+      name: p.name,
+      status: p.status,
+      color: p.color,
+      client: p.client,
+      description: p.description,
+      startDate: p.startDate,
+      endDate: p.endDate,
+      lastTaskDate: lastTaskDate?.toISOString() ?? null,
+      totalTasks,
+      doneTasks,
+      progress,
+      plannedCost,
+      doneCost,
+    };
+  });
+}
+
 export async function recalculateSchedule(projectId: string) {
   const project = await prisma.project.findUnique({
     where: { id: projectId },

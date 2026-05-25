@@ -14,6 +14,7 @@ export const projectsRouter = Router();
 
 projectsRouter.get('/', ctrl.list);
 projectsRouter.post('/', ctrl.create);
+projectsRouter.get('/summaries', ctrl.summaries);
 projectsRouter.get('/:id', ctrl.get);
 projectsRouter.patch('/:id', ctrl.update);
 projectsRouter.delete('/:id', ctrl.remove);
