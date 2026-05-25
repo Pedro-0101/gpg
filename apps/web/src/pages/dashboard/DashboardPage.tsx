@@ -196,9 +196,9 @@ export const DashboardPage: React.FC = () => {
           sub="entradas avulsas de custo"
         />
         <KPI
-          label="Equipe sobrecarregada"
+          label="Profissionais sobrecarregados"
           value={overloadedMembers.length}
-          sub={overloadedMembers.length > 0 ? 'Acima de 85% de carga' : 'Nenhum'}
+          sub={overloadedMembers.length > 0 ? 'Acima de 85% de carga esta semana' : 'Nenhum'}
           delta={overloadedMembers.length > 0 ? { dir: 'down', text: 'Risco' } : { dir: 'up', text: 'OK' }}
         />
       </div>

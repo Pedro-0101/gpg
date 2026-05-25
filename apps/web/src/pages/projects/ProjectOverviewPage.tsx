@@ -6,10 +6,117 @@ import { Avatar, AvatarStack } from '../../components/ui/Avatar';
 import { StatusChip } from '../../components/ui/StatusChip';
 import { costsApi } from '../../api/costs';
 import { milestonesApi } from '../../api/risks-milestones';
+import { calcSubtopicCost } from '../../lib/cost';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { differenceInCalendarDays } from 'date-fns';
 
 interface ProjectOverviewPageProps { project: any; }
+
+function BudgetChart({ project }: { project: any }) {
+  const allSubs = (project.stages ?? []).flatMap((s: any) =>
+    (s.topics ?? []).flatMap((t: any) => (t.subtopics ?? []).map((sub: any) => ({
+      endDate: sub.endDate as string | null,
+      cost: calcSubtopicCost(sub),
+      done: sub.status === 'done',
+    })))
+  );
+
+  if (allSubs.length === 0) return (
+    <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+      Sem tarefas com custo calculado.
+    </div>
+  );
+
+  const projectStart = new Date(project.startDate);
+  const endDates = allSubs.map((s: any) => (s.endDate ? new Date(s.endDate) : null)).filter((d: Date | null): d is Date => d !== null);
+  const lastTaskDate = endDates.length > 0 ? new Date(Math.max(...endDates.map((d: Date) => d.getTime()))) : new Date();
+  const projectEnd = project.endDate
+    ? new Date(Math.max(new Date(project.endDate).getTime(), lastTaskDate.getTime()))
+    : lastTaskDate;
+
+  const cursor = new Date(projectStart.getFullYear(), projectStart.getMonth(), 1);
+  const endMonth = new Date(projectEnd.getFullYear(), projectEnd.getMonth() + 1, 0);
+  const points: Array<{ label: string; planned: number; spent: number }> = [];
+
+  while (cursor <= endMonth) {
+    const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59);
+    let planned = 0;
+    let spent = 0;
+    for (const sub of allSubs) {
+      if (sub.endDate && new Date(sub.endDate) <= monthEnd) {
+        planned += sub.cost;
+        if (sub.done) spent += sub.cost;
+      }
+    }
+    points.push({
+      label: cursor.toLocaleDateString('pt-BR', { month: 'short' }),
+      planned,
+      spent,
+    });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  if (points.length < 2) return null;
+
+  const maxVal = Math.max(...points.map(p => p.planned), 1);
+  const W = 600, H = 150, PX = 6, PY = 10, LH = 16;
+  const cH = H - PY * 2 - LH;
+  const cW = W - PX * 2;
+
+  const xPos = (i: number) => PX + (i / (points.length - 1)) * cW;
+  const yPos = (v: number) => PY + cH - (v / maxVal) * cH;
+
+  const pathLine = (vals: number[]) =>
+    vals.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i).toFixed(1)} ${yPos(v).toFixed(1)}`).join(' ');
+
+  const pathArea = (vals: number[]) =>
+    `${pathLine(vals)} L ${xPos(vals.length - 1).toFixed(1)} ${yPos(0).toFixed(1)} L ${PX} ${yPos(0).toFixed(1)} Z`;
+
+  const today = new Date();
+  const totalMs = projectEnd.getTime() - projectStart.getTime();
+  const elapsedMs = today.getTime() - projectStart.getTime();
+  const todayFrac = Math.max(0, Math.min(1, elapsedMs / totalMs));
+  const todayX = PX + todayFrac * cW;
+
+  const labelStep = points.length <= 8 ? 1 : Math.ceil(points.length / 6);
+
+  return (
+    <div>
+      <div className="row" style={{ gap: 20, marginBottom: 10, fontSize: 12 }}>
+        <span className="row" style={{ gap: 5, alignItems: 'center' }}>
+          <span style={{ width: 24, height: 2, background: 'var(--border)', display: 'inline-block', borderRadius: 2 }} />
+          <span className="xs faint">Previsto</span>
+        </span>
+        <span className="row" style={{ gap: 5, alignItems: 'center' }}>
+          <span style={{ width: 24, height: 3, background: 'var(--accent)', display: 'inline-block', borderRadius: 2 }} />
+          <span className="xs faint">Realizado</span>
+        </span>
+        <span className="row" style={{ gap: 5, alignItems: 'center' }}>
+          <span style={{ width: 14, height: 2, background: 'var(--danger)', display: 'inline-block', borderRadius: 2 }} />
+          <span className="xs faint">Hoje</span>
+        </span>
+      </div>
+      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        {/* Planned area (light fill, dashed line) */}
+        <path d={pathArea(points.map(p => p.planned))} fill="var(--accent)" fillOpacity="0.07" />
+        <path d={pathLine(points.map(p => p.planned))} fill="none" stroke="var(--text-3)" strokeWidth="1.5" strokeDasharray="5 4" />
+        {/* Spent area (solid fill, accent line) */}
+        <path d={pathArea(points.map(p => p.spent))} fill="var(--accent)" fillOpacity="0.35" />
+        <path d={pathLine(points.map(p => p.spent))} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" />
+        {/* Today marker */}
+        <line x1={todayX} y1={PY} x2={todayX} y2={PY + cH} stroke="var(--danger)" strokeWidth="1.5" strokeDasharray="3 2" strokeOpacity="0.7" />
+        {/* Baseline */}
+        <line x1={PX} y1={PY + cH} x2={W - PX} y2={PY + cH} stroke="var(--border)" strokeWidth="1" />
+        {/* X labels */}
+        {points.map((p, i) =>
+          i % labelStep === 0 || i === points.length - 1 ? (
+            <text key={i} x={xPos(i)} y={H - 2} textAnchor="middle" fontSize="9" fill="var(--text-3)">{p.label}</text>
+          ) : null
+        )}
+      </svg>
+    </div>
+  );
+}
 
 export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ project }) => {
   const { data: costsSummary } = useQuery({
@@ -28,11 +135,21 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
   const completedTasks = allSubtopics.filter((s: any) => s.status === 'done').length;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  const budget = Number(project.totalBudget) || 0;
-  const totalSpent = costsSummary?.totalSpent ?? 0;
-  const burnRate = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
+  const plannedCost = costsSummary?.plannedCost ?? 0;
+  const doneCost = costsSummary?.doneCost ?? 0;
+  const burnRate = plannedCost > 0 ? Math.round((doneCost / plannedCost) * 100) : 0;
 
-  const daysLeft = project.endDate ? differenceInCalendarDays(new Date(project.endDate), new Date()) : null;
+  const lastTaskDate = allSubtopics.reduce((max: Date | null, sub: any) => {
+    const d = sub.endDate ? new Date(sub.endDate) : null;
+    if (!d) return max;
+    return !max || d > max ? d : max;
+  }, null as Date | null);
+
+  const deadlineDate = lastTaskDate ?? (project.endDate ? new Date(project.endDate) : null);
+  const daysLeft = deadlineDate ? differenceInCalendarDays(deadlineDate, new Date()) : null;
+
+  const teams = (project.teams ?? []) as any[];
+  const professionalsCount = teams.reduce((n: number, t: any) => n + (t.professionals?.length ?? 0), 0);
 
   const upcomingMilestones = (milestones as any[])
     .filter((m) => m.status === 'pending')
@@ -75,7 +192,7 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
           </div>
           <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>{project.name}</div>
           <div className="muted small" style={{ marginTop: 2 }}>
-            {project.manager ? `PM ${project.manager.name}` : 'Sem PM'} · {formatDate(project.startDate)} → {project.endDate ? formatDate(project.endDate) : '—'}
+            {project.manager ? `PM ${project.manager.name}` : 'Sem PM'} · {formatDate(project.startDate)} → {deadlineDate ? formatDate(deadlineDate) : '—'}
           </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -149,31 +266,73 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
           </div>
         </div>
 
-        <KPI label="Orçamento" value={formatCurrency(budget)} sub={`${burnRate}% consumido`} />
-        <KPI label="Prazo final" value={project.endDate ? formatDate(project.endDate) : '—'}
-          sub={daysLeft !== null ? `em ${Math.abs(daysLeft)} dias` : ''}
-          delta={daysLeft !== null && daysLeft < 0 ? { dir: 'down', text: 'atrasado' } : { dir: 'flat', text: 'no prazo' }} />
+        <KPI
+          label="Orçamento previsto"
+          value={formatCurrency(plannedCost)}
+          sub={plannedCost > 0 ? `${burnRate}% já realizado` : 'calculado pelas tarefas'}
+        />
+        <KPI
+          label="Prazo final das tarefas"
+          value={deadlineDate ? formatDate(deadlineDate) : '—'}
+          sub={daysLeft !== null ? (daysLeft < 0 ? `${Math.abs(daysLeft)} dias atrás` : `em ${daysLeft} dias`) : ''}
+          delta={daysLeft !== null && daysLeft < 0 ? { dir: 'down', text: 'atrasado' } : daysLeft !== null ? { dir: 'flat', text: 'no prazo' } : undefined}
+        />
         <KPI label="Tarefas abertas" value={totalTasks - completedTasks} sub={`${completedTasks} concluídas`} />
-        <KPI label="Equipe ativa" value={(project.members ?? []).length} sub="pessoas alocadas" />
+        <KPI label="Equipes alocadas" value={teams.length} sub={`${professionalsCount} profissionais`} />
+      </div>
+
+      {/* Budget area chart */}
+      <div className="card">
+        <div className="card-head">
+          <div className="card-title">Orçamento previsto × realizado</div>
+          <div className="row" style={{ gap: 16 }}>
+            <span className="xs faint">Previsto: <span className="b">{formatCurrency(plannedCost)}</span></span>
+            <span className="xs" style={{ color: 'var(--accent)' }}>Realizado: <span className="b">{formatCurrency(doneCost)}</span></span>
+          </div>
+        </div>
+        <div className="card-body" style={{ paddingTop: 4 }}>
+          <BudgetChart project={project} />
+        </div>
       </div>
 
       <div className="grid-3" style={{ gap: 12 }}>
-        {/* Equipe alocada */}
+        {/* Equipes alocadas */}
         <div className="card">
           <div className="card-head">
-            <div className="card-title">Equipe alocada</div>
-            <Link to="team" className="btn sm ghost">Gerenciar</Link>
+            <div className="card-title">Equipes alocadas</div>
+            <Link to="teams" className="btn sm ghost">Gerenciar</Link>
           </div>
           <div className="card-body flush">
-            {(project.members ?? []).slice(0, 6).map((member: any, i: number) => (
-              <div key={member.id} className="list-item">
-                <Avatar initials={member.initials} colorIndex={member.avatarColor} size="sm" />
-                <span className="fill small b truncate">{member.name}</span>
-                <span className="xs faint">{member.role}</span>
+            {teams.slice(0, 6).map((team: any) => (
+              <div key={team.id} className="list-item">
+                <div style={{
+                  width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                  background: 'var(--surface-2)', display: 'grid', placeItems: 'center',
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
+                    {team.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="fill" style={{ minWidth: 0 }}>
+                  <div className="small b truncate">{team.name}</div>
+                  <div className="xs faint">{(team.professionals ?? []).length} profissionais</div>
+                </div>
+                <AvatarStack>
+                  {(team.professionals ?? []).slice(0, 3).map((tp: any) => (
+                    <Avatar
+                      key={tp.professional.id}
+                      initials={tp.professional.initials}
+                      colorIndex={tp.professional.avatarColor}
+                      size="sm"
+                    />
+                  ))}
+                </AvatarStack>
               </div>
             ))}
-            {(project.members ?? []).length === 0 && (
-              <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-3)' }}>Sem membros.</div>
+            {teams.length === 0 && (
+              <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-3)' }}>
+                Sem equipes. <Link to="teams" style={{ color: 'var(--accent)' }}>Criar equipes.</Link>
+              </div>
             )}
           </div>
         </div>
@@ -208,12 +367,12 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
           </div>
           <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {[
-              ['stages', 'Abrir Gantt', 'gantt'],
-              ['stages', 'Ver kanban', 'stages'],
-              ['costs', 'Lançar despesa', 'costs'],
-              ['team', 'Convidar membro', 'team'],
-              ['reports', 'Gerar relatório', 'reports'],
-            ].map(([, label, to]) => (
+              ['Abrir Gantt', 'gantt'],
+              ['Ver tarefas', 'stages'],
+              ['Lançar despesa', 'costs'],
+              ['Gerenciar equipes', 'teams'],
+              ['Gerar relatório', 'reports'],
+            ].map(([label, to]) => (
               <Link
                 key={to}
                 to={to}

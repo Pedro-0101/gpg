@@ -39,9 +39,9 @@ export const Sidebar: React.FC = () => {
     <aside className="sidebar">
       {/* Workspace */}
       <div className="sb-workspace">
-        <div className="sb-logo">A</div>
+        <div className="sb-logo">G</div>
         <div className="fill">
-          <div className="sb-wsname">Acme Studio</div>
+          <div className="sb-wsname">GPG</div>
           <div className="sb-wssub">Workspace</div>
         </div>
       </div>
