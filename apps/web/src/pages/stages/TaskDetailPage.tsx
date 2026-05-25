@@ -359,6 +359,19 @@ export const TaskDetailPage: React.FC = () => {
             <div className="card-head"><div className="card-title">Propriedades</div></div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="col" style={{ gap: 4 }}>
+                <span className="xs faint">MODO</span>
+                <select 
+                  className="chip accent sm"
+                  style={{ width: '100%', border: '1px solid var(--border)', cursor: 'pointer', justifyContent: 'flex-start' }}
+                  value={task.isConcurrent ? 'concurrent' : 'sequential'}
+                  onChange={(e) => handleUpdate('isConcurrent', e.target.value === 'concurrent')}
+                >
+                  <option value="sequential">Sequencial</option>
+                  <option value="concurrent">Concomitante</option>
+                </select>
+              </div>
+              <div className="divider" />
+              <div className="col" style={{ gap: 4 }}>
                 <span className="xs faint">STATUS</span>
                 <select 
                   className="chip accent sm"
