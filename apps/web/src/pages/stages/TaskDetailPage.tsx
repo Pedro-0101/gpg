@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { subtopicsApi } from '../../api/subtopics';
 import { commentsApi } from '../../api/comments';
@@ -10,39 +10,41 @@ import { PrioChip } from '../../components/ui/PrioChip';
 import { Avatar, AvatarStack } from '../../components/ui/Avatar';
 import { formatDate, formatCurrency } from '../../lib/utils';
 import { calcSubtopicCost } from '../../lib/cost';
+import { ChevronLeft, X } from 'lucide-react';
 import type { SubtopicAttachment, SubtopicComment } from '../../types';
 
 const inp: React.CSSProperties = {
   width: '100%', padding: '6px 10px', border: '1px solid var(--border)',
-  borderRadius: 'var(--radius)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13,
+  borderRadius: 'var(--radius)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, outline: 'none',
 };
 
-const STATUS_OPTIONS = ['todo', 'inprog', 'review', 'done', 'blocked'] as const;
-const PRIO_OPTIONS = ['high', 'med', 'low'] as const;
-const TYPE_OPTIONS = ['task', 'milestone', 'deliverable'] as const;
+const STATUS_OPTIONS = [
+  { value: 'todo', label: 'A fazer' },
+  { value: 'inprog', label: 'Em progresso' },
+  { value: 'review', label: 'Em revisão' },
+  { value: 'done', label: 'Concluído' },
+  { value: 'blocked', label: 'Bloqueado' },
+];
+
+const PRIO_OPTIONS = [
+  { value: 'high', label: 'Alta' },
+  { value: 'med', label: 'Média' },
+  { value: 'low', label: 'Baixa' },
+];
 
 export const TaskDetailPage: React.FC = () => {
   const { projectId, stageId, topicId, id: subtopicId } = useParams();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const [editing, setEditing] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [attachForm, setAttachForm] = useState(false);
   const [attachName, setAttachName] = useState('');
   const [attachUrl, setAttachUrl] = useState('');
 
-  // Edit form state
-  const [eName, setEName] = useState('');
-  const [eDesc, setEDesc] = useState('');
-  const [eStatus, setEStatus] = useState<string>('todo');
-  const [ePriority, setEPriority] = useState<string>('med');
-  const [eType, setEType] = useState<string>('task');
-  const [eDuration, setEDuration] = useState('');
-  const [eSpent, setESpent] = useState('');
-  const [eProgress, setEProgress] = useState('');
-  const [eDeadline, setEDeadline] = useState('');
-  const [eConcurrent, setEConcurrent] = useState(false);
-  const [eTeamIds, setETeamIds] = useState<string[]>([]);
+  // Inline edit state
+  const [localName, setLocalName] = useState('');
+  const [localDesc, setLocalDesc] = useState('');
 
   const { data: task, isLoading } = useQuery({
     queryKey: ['subtopics', subtopicId],
@@ -67,29 +69,18 @@ export const TaskDetailPage: React.FC = () => {
     enabled: !!subtopicId,
   });
 
-  // Populate form when task loads or edit opens
   useEffect(() => {
-    if (task && editing) {
-      setEName(task.name);
-      setEDesc((task as any).description ?? '');
-      setEStatus(task.status);
-      setEPriority(task.priority ?? 'med');
-      setEType((task as any).taskType ?? 'task');
-      setEDuration(String(task.durationHours ?? ''));
-      setESpent(String(task.spentHours ?? ''));
-      setEProgress(String(task.progress ?? ''));
-      setEDeadline(task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : '');
-      setEConcurrent(!!(task as any).isConcurrent);
-      setETeamIds((task.teams ?? []).map((t: any) => t.teamId ?? t.team?.id).filter(Boolean));
+    if (task) {
+      setLocalName(task.name);
+      setLocalDesc((task as any).description || '');
     }
-  }, [task, editing]);
+  }, [task]);
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => subtopicsApi.update(projectId!, stageId!, topicId!, subtopicId!, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['subtopics', subtopicId] });
       qc.invalidateQueries({ queryKey: ['stages', projectId] });
-      setEditing(false);
     },
   });
 
@@ -118,71 +109,124 @@ export const TaskDetailPage: React.FC = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments', subtopicId] }),
   });
 
-  function toggleTeam(id: string) {
-    setETeamIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-  }
-
-  function handleSave() {
-    updateMutation.mutate({
-      name: eName.trim(),
-      description: eDesc.trim() || undefined,
-      status: eStatus,
-      priority: ePriority,
-      taskType: eType,
-      durationHours: parseInt(eDuration, 10) || 1,
-      spentHours: parseFloat(eSpent) || 0,
-      progress: parseInt(eProgress, 10) || 0,
-      deadline: eDeadline || null,
-      isConcurrent: eConcurrent,
-      teamIds: eTeamIds,
-    });
-  }
-
   if (isLoading) return <div className="faint" style={{ padding: 32, textAlign: 'center' }}>Carregando...</div>;
   if (!task) return <div style={{ padding: 32, textAlign: 'center', color: 'var(--danger)' }}>Tarefa não encontrada.</div>;
 
   const professionals = (task.teams ?? []).flatMap((t: any) => t.team?.professionals ?? []);
   const taskCost = calcSubtopicCost(task);
 
+  const handleUpdate = (field: string, value: any) => {
+    if ((task as any)[field] === value) return;
+    
+    const updates: any = { [field]: value };
+    
+    // Auto-calculate progress if hours change
+    if (field === 'durationHours' || field === 'spentHours') {
+      const duration = field === 'durationHours' ? (parseInt(value) || 0) : task.durationHours;
+      const spent = field === 'spentHours' ? (parseFloat(value) || 0) : task.spentHours;
+      if (duration > 0) {
+        updates.progress = Math.min(100, Math.round((spent / duration) * 100));
+      } else {
+        updates.progress = 0;
+      }
+    }
+    
+    updateMutation.mutate(updates);
+  };
+
+  const handleTeamToggle = (teamId: string) => {
+    const currentIds = (task.teams ?? []).map((t: any) => t.teamId).filter(Boolean);
+    const newIds = currentIds.includes(teamId)
+      ? currentIds.filter((id: string) => id !== teamId)
+      : [...currentIds, teamId];
+    updateMutation.mutate({ teamIds: newIds });
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Hero */}
       <div className="card" style={{ padding: 20 }}>
-        <div className="bread" style={{ marginBottom: 14 }}>
-          <Link to={`/projects/${projectId}`} className="crumb">Projeto</Link>
-          <svg className="sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
-          <Link to={`/projects/${projectId}/stages`} className="crumb">Tarefas</Link>
-          <svg className="sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
-          <span className="crumb curr">{task.name}</span>
+        <div className="row between" style={{ marginBottom: 14 }}>
+          <div className="bread">
+            <Link to={`/projects/${projectId}`} className="crumb">Projeto</Link>
+            <svg className="sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+            <Link to={`/projects/${projectId}/stages`} className="crumb">Tarefas</Link>
+            <svg className="sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+            <span className="crumb curr">{task.name}</span>
+          </div>
+          <button className="btn ghost sm" onClick={() => navigate(-1)}>
+            <ChevronLeft size={14} /> Voltar
+          </button>
         </div>
 
         <div className="row" style={{ gap: 8, marginBottom: 10 }}>
           <span className="chip accent xs">#{task.id.slice(-4).toUpperCase()}</span>
-          <StatusChip status={task.status} />
-          {task.priority && <PrioChip priority={task.priority} />}
-          <button className="btn ghost sm" style={{ marginLeft: 'auto' }} onClick={() => setEditing(true)}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            Editar
-          </button>
+          
+          <select 
+            className="chip accent xs" 
+            style={{ border: 'none', cursor: 'pointer', outline: 'none', fontWeight: 600 }}
+            value={task.status}
+            onChange={(e) => handleUpdate('status', e.target.value)}
+          >
+            {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
+
+          <select 
+            className="chip accent xs" 
+            style={{ border: 'none', cursor: 'pointer', outline: 'none', fontWeight: 600 }}
+            value={task.priority}
+            onChange={(e) => handleUpdate('priority', e.target.value)}
+          >
+            {PRIO_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
         </div>
 
-        <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14 }}>{task.name}</div>
+        <input 
+          style={{ 
+            fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14,
+            width: '100%', border: 'none', background: 'transparent', outline: 'none',
+            padding: 0, color: 'var(--text)'
+          }}
+          value={localName}
+          onChange={(e) => setLocalName(e.target.value)}
+          onBlur={() => handleUpdate('name', localName)}
+          placeholder="Nome da tarefa"
+        />
 
         <div className="row" style={{ gap: 20, flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
           <div className="col" style={{ gap: 2 }}>
-            <span className="xs faint">PRAZO</span>
-            <span className="small b">{task.deadline ? formatDate(task.deadline) : '—'}</span>
+            <span className="xs faint">INÍCIO</span>
+            <span className="small b">{task.startDate ? formatDate(task.startDate) : '—'}</span>
+          </div>
+          <div className="col" style={{ gap: 2 }}>
+            <span className="xs faint">PRAZO CALCULADO</span>
+            <span className="small b" style={{ color: task.endDate ? 'var(--text)' : 'var(--text-3)' }}>
+              {task.endDate ? formatDate(task.endDate) : '—'}
+            </span>
           </div>
           <div className="col" style={{ gap: 2 }}>
             <span className="xs faint">ESTIMADO</span>
-            <span className="small b">{task.durationHours || 0}h</span>
+            <div className="row" style={{ gap: 2 }}>
+              <input 
+                type="number"
+                style={{ ...inp, border: 'none', padding: 0, background: 'transparent', fontWeight: 600, width: 40, textAlign: 'right' }}
+                value={task.durationHours}
+                onChange={(e) => handleUpdate('durationHours', e.target.value)}
+              />
+              <span className="small b">h</span>
+            </div>
           </div>
           <div className="col" style={{ gap: 2 }}>
             <span className="xs faint">GASTO</span>
-            <span className="small b" style={{ color: 'var(--accent)' }}>{task.spentHours || 0}h</span>
+            <div className="row" style={{ gap: 2 }}>
+              <input 
+                type="number"
+                style={{ ...inp, border: 'none', padding: 0, background: 'transparent', fontWeight: 600, width: 40, textAlign: 'right', color: 'var(--accent)' }}
+                value={task.spentHours}
+                onChange={(e) => handleUpdate('spentHours', e.target.value)}
+              />
+              <span className="small b" style={{ color: 'var(--accent)' }}>h</span>
+            </div>
           </div>
           <div className="col" style={{ gap: 2 }}>
             <span className="xs faint">CUSTO PREVISTO</span>
@@ -192,22 +236,46 @@ export const TaskDetailPage: React.FC = () => {
           </div>
           <div className="col" style={{ gap: 2, marginLeft: 'auto' }}>
             <span className="xs faint">RESPONSÁVEIS</span>
-            <AvatarStack>
-              {professionals.length > 0
-                ? professionals.map((tp: any) => <Avatar key={tp.professional.id} initials={tp.professional.initials} colorIndex={tp.professional.avatarColor} size="sm" />)
-                : <Avatar initials="?" colorIndex={8} size="sm" />}
-            </AvatarStack>
+            <div className="row" style={{ gap: 6 }}>
+              <AvatarStack>
+                {professionals.length > 0
+                  ? professionals.map((tp: any) => <Avatar key={tp.professional.id} initials={tp.professional.initials} colorIndex={tp.professional.avatarColor} size="sm" />)
+                  : <Avatar initials="?" colorIndex={8} size="sm" />}
+              </AvatarStack>
+              
+              <div style={{ position: 'relative' }}>
+                <select 
+                  className="chip purple"
+                  style={{ border: 'none', cursor: 'pointer', outline: 'none', width: 30, padding: '2px 0', textAlign: 'center', fontSize: 13 }}
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) handleTeamToggle(e.target.value);
+                    e.target.value = '';
+                  }}
+                >
+                  <option value="">+</option>
+                  {allTeams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {(task.teams || []).some((t: any) => t.teamId === team.id) ? '✓ ' : '+ '}
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
         {task.progress != null && (
           <div style={{ marginTop: 12 }}>
             <div className="row" style={{ marginBottom: 4 }}>
-              <span className="xs faint">PROGRESSO</span>
-              <span className="xs b" style={{ marginLeft: 'auto' }}>{task.progress}%</span>
+              <span className="xs faint">PROGRESSO (BASEADO EM HORAS)</span>
+              <div className="row" style={{ marginLeft: 'auto', gap: 6 }}>
+                <span className="xs b">{task.progress}%</span>
+              </div>
             </div>
             <div className="bar thick">
-              <span style={{ width: `${task.progress}%` }} />
+              <span style={{ width: `${task.progress}%`, transition: 'width 0.3s ease' }} />
             </div>
           </div>
         )}
@@ -220,8 +288,18 @@ export const TaskDetailPage: React.FC = () => {
           {/* Description */}
           <div className="card">
             <div className="card-head"><div className="card-title">Descrição</div></div>
-            <div className="card-body" style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6 }}>
-              {(task as any).description || <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Nenhuma descrição.</span>}
+            <div className="card-body" style={{ padding: 0 }}>
+              <textarea 
+                style={{ 
+                  width: '100%', minHeight: 160, border: 'none', background: 'transparent',
+                  padding: 16, color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6,
+                  outline: 'none', resize: 'vertical'
+                }}
+                placeholder="Adicione uma descrição detalhada para esta tarefa..."
+                value={localDesc}
+                onChange={(e) => setLocalDesc(e.target.value)}
+                onBlur={() => handleUpdate('description', localDesc)}
+              />
             </div>
           </div>
 
@@ -282,69 +360,104 @@ export const TaskDetailPage: React.FC = () => {
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="col" style={{ gap: 4 }}>
                 <span className="xs faint">STATUS</span>
-                <StatusChip status={task.status} />
+                <select 
+                  className="chip accent sm"
+                  style={{ width: '100%', border: '1px solid var(--border)', cursor: 'pointer', justifyContent: 'flex-start' }}
+                  value={task.status}
+                  onChange={(e) => handleUpdate('status', e.target.value)}
+                >
+                  {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
               </div>
-              {task.priority && (
-                <div className="col" style={{ gap: 4 }}>
-                  <span className="xs faint">PRIORIDADE</span>
-                  <PrioChip priority={task.priority} />
-                </div>
-              )}
+              <div className="col" style={{ gap: 4 }}>
+                <span className="xs faint">PRIORIDADE</span>
+                <select 
+                  className="chip accent sm"
+                  style={{ width: '100%', border: '1px solid var(--border)', cursor: 'pointer', justifyContent: 'flex-start' }}
+                  value={task.priority}
+                  onChange={(e) => handleUpdate('priority', e.target.value)}
+                >
+                  {PRIO_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
               <div className="divider" />
               <div className="col" style={{ gap: 4 }}>
                 <span className="xs faint">HORAS ESTIMADAS</span>
-                <span className="small b">{task.durationHours || 0}h</span>
+                <input 
+                  type="number" min={1}
+                  style={inp}
+                  value={task.durationHours}
+                  onChange={(e) => handleUpdate('durationHours', parseInt(e.target.value) || 0)}
+                />
               </div>
               <div className="col" style={{ gap: 4 }}>
                 <span className="xs faint">HORAS GASTAS</span>
-                <span className="small b" style={{ color: 'var(--accent)' }}>{task.spentHours || 0}h</span>
+                <input
+                  type="number" min={0} step={0.5}
+                  style={inp}
+                  value={task.spentHours}
+                  onChange={(e) => handleUpdate('spentHours', parseFloat(e.target.value) || 0)}
+                />
               </div>
               <div className="divider" />
+              <div className="col" style={{ gap: 4 }}>
+                <span className="xs faint">INÍCIO CALCULADO</span>
+                <span className="small b">{task.startDate ? formatDate(task.startDate) : '—'}</span>
+              </div>
+              <div className="col" style={{ gap: 4 }}>
+                <span className="xs faint">FIM CALCULADO</span>
+                <span className="small b">{task.endDate ? formatDate(task.endDate) : '—'}</span>
+              </div>
               <div className="col" style={{ gap: 4 }}>
                 <span className="xs faint">CUSTO PREVISTO</span>
                 <span className="small b" style={{ color: taskCost > 0 ? 'var(--accent)' : 'var(--text-3)' }}>
                   {taskCost > 0 ? formatCurrency(taskCost) : '—'}
                 </span>
                 {taskCost > 0 && (
-                  <span className="xs faint">{task.durationHours}h × R${
-                    ((task.teams ?? []).reduce((s: number, st: any) =>
-                      s + (st.team?.professionals ?? []).reduce((s2: number, tp: any) =>
-                        s2 + Number(tp.professional?.hourlyCost ?? 0), 0), 0)
-                    ).toFixed(0)
-                  }/h</span>
+                  <span className="xs faint">
+                    {task.durationHours}h × R${
+                      ((task.teams ?? []).reduce((s: number, st: any) =>
+                        s + (st.team?.professionals ?? []).reduce((s2: number, tp: any) =>
+                          s2 + Number(tp.professional?.hourlyCost ?? 0), 0), 0)
+                      ).toFixed(0)
+                    }/h
+                  </span>
                 )}
               </div>
+              <div className="divider" />
               <div className="col" style={{ gap: 4 }}>
-                <span className="xs faint">CRIADO EM</span>
-                <span className="xs">{formatDate(task.createdAt)}</span>
+                <span className="xs faint">EQUIPES</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {(task.teams || []).map((t: any) => (
+                    <span 
+                      key={t.teamId} 
+                      className="chip purple" 
+                      style={{ cursor: 'pointer', paddingRight: 6 }}
+                      onClick={() => handleTeamToggle(t.teamId)}
+                      title="Clique para remover"
+                    >
+                      {t.team?.name || 'Equipe'} <X size={10} style={{ marginLeft: 4 }} />
+                    </span>
+                  ))}
+                  <select 
+                    className="chip accent"
+                    style={{ border: '1px dashed var(--border)', cursor: 'pointer', width: 'auto' }}
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) handleTeamToggle(e.target.value);
+                      e.target.value = '';
+                    }}
+                  >
+                    <option value="">+ Add equipe</option>
+                    {allTeams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {(task.teams || []).some((t: any) => t.teamId === team.id) ? '✓ ' : '+ '}
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Teams */}
-          <div className="card">
-            <div className="card-head">
-              <div className="card-title">Equipes</div>
-              <button className="btn ghost sm" onClick={() => setEditing(true)}>+ Editar</button>
-            </div>
-            <div className="card-body flush">
-              {(task.teams ?? []).length === 0 ? (
-                <div style={{ padding: '12px 16px', color: 'var(--text-3)', fontSize: 13, fontStyle: 'italic' }}>Nenhuma equipe.</div>
-              ) : (task.teams ?? []).map((t: any) => {
-                const team = t.team;
-                if (!team) return null;
-                return (
-                  <div key={team.id} className="list-item" style={{ gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    </div>
-                    <div className="fill col" style={{ gap: 2 }}>
-                      <span className="small b">{team.name}</span>
-                      <span className="xs faint">{team.professionals?.length ?? 0} profissional(is)</span>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
 
@@ -389,129 +502,6 @@ export const TaskDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Edit Modal */}
-      {editing && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={(e) => { if (e.target === e.currentTarget) setEditing(false); }}
-        >
-          <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', width: '100%', maxWidth: 620, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            {/* Modal header */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-              <span style={{ fontWeight: 600, fontSize: 15 }}>Editar tarefa</span>
-              <button className="icon-btn ghost" onClick={() => setEditing(false)}>✕</button>
-            </div>
-
-            {/* Modal body */}
-            <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-              {/* Name */}
-              <div>
-                <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Nome *</label>
-                <input style={inp} value={eName} onChange={(e) => setEName(e.target.value)} />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Descrição</label>
-                <textarea style={{ ...inp, minHeight: 72, resize: 'vertical' }} value={eDesc} onChange={(e) => setEDesc(e.target.value)} />
-              </div>
-
-              {/* Status / Priority / Type */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                <div>
-                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Status</label>
-                  <select style={inp} value={eStatus} onChange={(e) => setEStatus(e.target.value)}>
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Prioridade</label>
-                  <select style={inp} value={ePriority} onChange={(e) => setEPriority(e.target.value)}>
-                    {PRIO_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Tipo</label>
-                  <select style={inp} value={eType} onChange={(e) => setEType(e.target.value)}>
-                    {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Hours / Progress / Deadline */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
-                <div>
-                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Horas estimadas</label>
-                  <input type="number" min={1} style={inp} value={eDuration} onChange={(e) => setEDuration(e.target.value)} />
-                </div>
-                <div>
-                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Horas gastas</label>
-                  <input type="number" min={0} step={0.5} style={inp} value={eSpent} onChange={(e) => setESpent(e.target.value)} />
-                </div>
-                <div>
-                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Progresso %</label>
-                  <input type="number" min={0} max={100} style={inp} value={eProgress} onChange={(e) => setEProgress(e.target.value)} />
-                </div>
-                <div>
-                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Prazo</label>
-                  <input type="date" style={inp} value={eDeadline} onChange={(e) => setEDeadline(e.target.value)} />
-                </div>
-              </div>
-
-              {/* Concurrent */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
-                <input type="checkbox" checked={eConcurrent} onChange={(e) => setEConcurrent(e.target.checked)} style={{ width: 14, height: 14 }} />
-                <span>Concomitante (executa em paralelo com tarefas anteriores)</span>
-              </label>
-
-              {/* Teams */}
-              <div>
-                <label className="xs faint" style={{ display: 'block', marginBottom: 8 }}>Equipes responsáveis</label>
-                {(allTeams as any[]).length === 0 ? (
-                  <div className="xs faint" style={{ fontStyle: 'italic' }}>Nenhuma equipe cadastrada no projeto.</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 4px' }}>
-                    {(allTeams as any[]).map((team: any) => {
-                      const checked = eTeamIds.includes(team.id);
-                      const profCount = team.professionals?.length ?? 0;
-                      return (
-                        <label
-                          key={team.id}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 'var(--radius)', cursor: 'pointer', background: checked ? 'var(--accent-soft)' : 'transparent' }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleTeam(team.id)}
-                            style={{ width: 14, height: 14, flexShrink: 0 }}
-                          />
-                          <span className="small b fill">{team.name}</span>
-                          {profCount > 0 && (
-                            <span className="xs faint">{profCount} profissional{profCount !== 1 ? 'is' : ''}</span>
-                          )}
-                          {team.totalCostPerHour > 0 && (
-                            <span className="xs faint mono">R${Number(team.totalCostPerHour).toFixed(0)}/h</span>
-                          )}
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Modal footer */}
-            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
-              <button className="btn ghost" onClick={() => setEditing(false)}>Cancelar</button>
-              <button className="btn primary" disabled={!eName.trim() || updateMutation.isPending} onClick={handleSave}>
-                {updateMutation.isPending ? 'Salvando...' : 'Salvar alterações'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
