@@ -212,7 +212,7 @@ export const DashboardPage: React.FC = () => {
               </div>
               {(stages as any[]).length > 0 && (
                 <div className="stepper" style={{ marginTop: 14, flexWrap: 'wrap' }}>
-                  {(stages as any[]).slice(0, 6).map((stage: any, i: number) => {
+                  {(stages as any[]).map((stage: any, i: number) => {
                     const stageDone = (stage.topics ?? []).every((t: any) =>
                       (t.subtopics ?? []).every((s: any) => s.status === 'done'),
                     );
