@@ -69,18 +69,39 @@ function StageMiniTimeline({ stages }: { stages: any[] }) {
                 {stage.name}
               </div>
               <div style={{ flex: 1, position: 'relative', height: 24 }}>
+                {/* Bar */}
                 <div style={{
                   position: 'absolute', left: `${startPct}%`, width: `${width}%`,
                   height: 22, top: 1, borderRadius: 4,
                   background: color, opacity: 0.85,
-                  display: 'flex', alignItems: 'center', paddingLeft: 8, overflow: 'hidden', minWidth: 4,
-                }}>
-                  {width > 12 && (
-                    <span style={{ fontSize: 10, color: 'white', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                      {subs.length > 0 ? `${done}/${subs.length}` : stage.name.slice(0, 8)}
-                    </span>
-                  )}
-                </div>
+                  minWidth: 4,
+                }} />
+                {/* Label — inside bar if wide enough, otherwise to the right */}
+                {subs.length > 0 && (() => {
+                  const label = `${done}/${subs.length}`;
+                  if (width >= 10) {
+                    return (
+                      <span style={{
+                        position: 'absolute', left: `calc(${startPct}% + 8px)`, top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontSize: 10, color: 'white', fontWeight: 600, whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                        maxWidth: `calc(${width}% - 12px)`, overflow: 'hidden',
+                      }}>{label}</span>
+                    );
+                  }
+                  const rightPct = startPct + width;
+                  return (
+                    <span style={{
+                      position: 'absolute',
+                      left: `calc(${rightPct}% + 4px)`, top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: 10, color: color, fontWeight: 600, whiteSpace: 'nowrap',
+                      pointerEvents: 'none',
+                    }}>{label}</span>
+                  );
+                })()}
+                {/* Today marker */}
                 <div style={{
                   position: 'absolute', left: `${todayPct}%`, top: -3, bottom: -3,
                   borderLeft: '1.5px dashed var(--danger)', pointerEvents: 'none',
