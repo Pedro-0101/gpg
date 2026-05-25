@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createSubtopicSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().optional(),
-  durationHours: z.number().int().min(1),
+  durationHours: z.number().int().min(0),
   isConcurrent: z.boolean().default(false),
   order: z.number().int().min(1).default(1),
   teamIds: z.string().array().optional().default([]),

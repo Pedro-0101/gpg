@@ -82,8 +82,9 @@ export function parseCsvFile(text: string): CsvRow[] {
   for (let i = startIdx; i < rows.length; i++) {
     const [etapa = '', topico = '', subtopico = '', tempo = '', tipo = '', equipes = ''] = rows[i];
     if (!etapa || !topico || !subtopico) continue;
-    const hours = parseInt(tempo, 10);
-    if (isNaN(hours) || hours < 1) continue;
+    const isContinuous = /cont[íi]nuo/i.test(tempo.trim());
+    const hours = isContinuous ? 0 : parseInt(tempo, 10);
+    if (!isContinuous && (isNaN(hours) || hours < 0)) continue;
     result.push({
       etapa: etapa.trim(),
       topico: topico.trim(),
@@ -255,7 +256,7 @@ export function generateCsv(stages: any[]): string {
           csvEscape(stage.name),
           csvEscape(topic.name),
           csvEscape(sub.name),
-          String(sub.durationHours),
+          sub.durationHours === 0 ? 'Contínuo' : String(sub.durationHours),
           sub.isConcurrent ? 'concomitante' : 'sequencial',
           csvEscape(equipes),
         ].join(','));
