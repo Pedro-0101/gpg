@@ -118,6 +118,18 @@ export const TaskKanbanView: React.FC<TaskKanbanViewProps> = ({ project, stages:
                   <span className="xs b">{donePct}%</span>
                 </div>
               </div>
+              
+              {/* Mini Gantt */}
+              <div style={{ padding: '8px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="row" style={{ fontSize: 10, color: 'var(--text-3)', justifyContent: 'space-between' }}>
+                  <span>Cronograma da Etapa</span>
+                  <span>{stage.startDate ? new Date(stage.startDate).toLocaleDateString() : '—'} → {stage.endDate ? new Date(stage.endDate).toLocaleDateString() : '—'}</span>
+                </div>
+                <div className="bar thick" style={{ height: 6, background: 'var(--border)' }}>
+                  <span style={{ width: '100%', background: 'var(--accent-soft)' }} />
+                </div>
+              </div>
+
               <div className="card-body" style={{ padding: 10 }}>
                 <div className="kanban">
                   {COLS.map((col) => {
@@ -173,6 +185,9 @@ export const TaskKanbanView: React.FC<TaskKanbanViewProps> = ({ project, stages:
                                             {task.topicName || 'Tópico'}
                                           </span>
                                           <PrioChip priority={task.priority || 'med'} />
+                                          <span className="chip xs" style={{ fontSize: 9 }}>
+                                            {task.isConcurrent ? 'CONC' : 'SEQ'}
+                                          </span>
                                         </div>
                                         <div className="title">{task.name}</div>
                                         {task.status === 'inprog' && task.progress != null && (
