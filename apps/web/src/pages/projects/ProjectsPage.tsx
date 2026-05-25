@@ -62,7 +62,7 @@ export function ProjectsPage() {
       form.reset({
         name: project.name,
         description: project.description ?? undefined,
-        startDate: new Date(project.startDate),
+        startDate: project.startDate.split('T')[0] as unknown as Date,
         dailyHours: project.dailyHours,
         status: project.status as CreateProjectDto['status'],
       });

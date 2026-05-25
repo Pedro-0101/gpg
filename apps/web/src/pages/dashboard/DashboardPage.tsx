@@ -8,6 +8,7 @@ import { stagesApi } from '../../api/stages';
 import { KPI } from '../../components/ui/KPI';
 import { Avatar } from '../../components/ui/Avatar';
 import { StatusChip } from '../../components/ui/StatusChip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { differenceInCalendarDays } from 'date-fns';
 import type { ProjectSummary, MemberMetrics, Milestone } from '../../types';
@@ -117,21 +118,22 @@ export const DashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* Project chips selector */}
+      {/* Project selector */}
       {summaries.length > 0 && (
         <div className="card" style={{ padding: '12px 16px' }}>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span className="xs faint" style={{ flexShrink: 0 }}>Projetos:</span>
-            {summaries.map((p) => {
-              const isSelected = selectedIds.includes(p.id);
-              const isHero = p.id === heroId;
-              return (
-                <div key={p.id} className="row" style={{ gap: 4 }}>
+          <div className="row" style={{ gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span className="xs faint" style={{ flexShrink: 0 }}>Projetos:</span>
+              {summaries.map((p) => {
+                const isSelected = selectedIds.includes(p.id);
+                const isHero = p.id === heroId;
+                return (
                   <button
+                    key={p.id}
                     onClick={() => toggleProject(p.id)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '5px 10px', borderRadius: 'var(--radius)',
+                      padding: '4px 10px', borderRadius: 'var(--radius)',
                       border: `1.5px solid ${isSelected ? p.color || 'var(--accent)' : 'var(--border)'}`,
                       background: isSelected ? `color-mix(in srgb, ${p.color || 'var(--accent)'} 12%, transparent)` : 'transparent',
                       color: isSelected ? 'var(--text)' : 'var(--text-3)',
@@ -146,28 +148,29 @@ export const DashboardPage: React.FC = () => {
                     {p.name}
                     {isHero && <span style={{ fontSize: 10, color: p.color || 'var(--accent)', fontWeight: 700 }}>★</span>}
                   </button>
-                  {isSelected && !isHero && (
-                    <button
-                      onClick={() => setHero(p.id)}
-                      title="Definir como projeto principal"
-                      style={{
-                        padding: '4px 7px', borderRadius: 'var(--radius)',
-                        border: '1px solid var(--border)', background: 'transparent',
-                        color: 'var(--text-3)', cursor: 'pointer', fontSize: 11,
-                      }}
-                    >
-                      ★
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-            <button
-              onClick={() => setSelectedIds(summaries.map((p) => p.id))}
-              style={{ padding: '4px 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--text-3)' }}
-            >
-              Todos
-            </button>
+                );
+              })}
+              <button
+                onClick={() => setSelectedIds(summaries.map((p) => p.id))}
+                style={{ padding: '4px 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--text-3)' }}
+              >
+                Selecionar todos
+              </button>
+            </div>
+
+            <div className="row" style={{ gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
+              <span className="xs faint" style={{ flexShrink: 0 }}>Principal:</span>
+              <Select value={heroId || ''} onValueChange={setHero}>
+                <SelectTrigger className="w-[180px] h-8">
+                  <SelectValue placeholder="Escolha" />
+                </SelectTrigger>
+                <SelectContent>
+                  {summaries.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       )}
