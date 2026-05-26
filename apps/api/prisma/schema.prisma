@@ -85,8 +85,9 @@ model Subtopic {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  topic       Topic               @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic       Topic                @relation(fields: [topicId], references: [id], onDelete: Cascade)
   teams       SubtopicTeam[]
+  professionals SubtopicProfessional[]
   comments    SubtopicComment[]
   attachments SubtopicAttachment[]
 }
@@ -114,10 +115,11 @@ model Professional {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  teams     TeamProfessional[]
-  costs     CostEntry[]
-  decisions Decision[]
+  project    Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teams      TeamProfessional[]
+  subtopics  SubtopicProfessional[]
+  costs      CostEntry[]
+  decisions  Decision[]
 }
 
 model Team {
@@ -130,6 +132,16 @@ model Team {
   project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   professionals TeamProfessional[]
   subtopics     SubtopicTeam[]
+}
+
+model SubtopicProfessional {
+  subtopicId     String
+  professionalId String
+
+  subtopic     Subtopic     @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@id([subtopicId, professionalId])
 }
 
 model TeamProfessional {
