@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { KPI } from '../../components/ui/KPI';
 import { Avatar } from '../../components/ui/Avatar';
 import { membersApi } from '../../api/members';
+import { formatCurrency } from '@/lib/utils';
 import type { Project, Professional, MemberMetrics } from '../../types';
 
 interface MembersPageProps { project: Project; }
@@ -11,10 +12,27 @@ interface MemberForm { name: string; initials: string; role: string; skills: str
 
 const COLOR_LABELS = ['Roxo/Indigo', 'Rosa/Red', 'Verde/Teal', 'Laranja/Amarelo', 'Azul/Teal', 'Lilás/Rosa', 'Verde/Lime', 'Laranja/Amarelo'];
 
+function Sparkline({ points, color = 'var(--success)' }: { points: number[]; color?: string }) {
+  const w = 70, h = 28;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = Math.max(max - min, 1);
+  const pts = points.map((v, i) =>
+    `${(i / (points.length - 1)) * w},${h - ((v - min) / range) * (h - 4) - 2}`
+  ).join(' ');
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none" style={{ overflow: 'visible', display: 'block' }}>
+      <polyline points={pts} stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export const MembersPage: React.FC<MembersPageProps> = ({ project }) => {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Professional | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [menuId, setMenuId] = useState<string | null>(null);
 
   const { data: members = [] } = useQuery<Professional[]>({
     queryKey: ['members', project.id],
@@ -44,6 +62,7 @@ export const MembersPage: React.FC<MembersPageProps> = ({ project }) => {
     setEditing(m);
     reset({ name: m.name, initials: m.initials, role: m.role, skills: m.skills.join(', '), avatarColor: m.avatarColor });
     setDialogOpen(true);
+    setMenuId(null);
   }
   function closeDialog() { setDialogOpen(false); setEditing(null); reset(); }
   function onSubmit(data: MemberForm) {
@@ -58,13 +77,24 @@ export const MembersPage: React.FC<MembersPageProps> = ({ project }) => {
     const parts = e.target.value.trim().split(' ').filter(Boolean);
     setValue('initials', parts.slice(0, 2).map((p) => p[0]).join('').toUpperCase());
   }
+  function handleDelete(member: Professional) {
+    setMenuId(null);
+    if (window.confirm(`Remover ${member.name}?`)) deleteMutation.mutate(member.id);
+  }
 
   const metricsById = Object.fromEntries(metrics.map((m) => [m.memberId, m]));
   const avgLoad = metrics.length > 0 ? Math.round(metrics.reduce((a, m) => a + m.loadPercent, 0) / metrics.length) : 0;
   const avgPerf = metrics.length > 0 ? Math.round(metrics.reduce((a, m) => a + m.performance, 0) / metrics.length) : 0;
+  const totalHours = metrics.reduce((a, m) => a + (m.activeHours || 0), 0);
+  const totalWeeklyCost = members.reduce((a, member) => {
+    const m = metricsById[member.id];
+    return a + (m ? m.activeHours * Number(member.hourlyCost) : 0);
+  }, 0);
+
+  const allSkills = Array.from(new Set(members.flatMap((m) => m.skills ?? [])));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }} onClick={() => menuId && setMenuId(null)}>
       <div className="page-head">
         <div>
           <div className="page-title">Equipe</div>
@@ -72,8 +102,8 @@ export const MembersPage: React.FC<MembersPageProps> = ({ project }) => {
         </div>
         <div className="row" style={{ gap: 8 }}>
           <div className="seg">
-            <button className="seg-btn active">Cards</button>
-            <button className="seg-btn">Tabela</button>
+            <button className={`seg-btn${viewMode === 'cards' ? ' active' : ''}`} onClick={() => setViewMode('cards')}>Cards</button>
+            <button className={`seg-btn${viewMode === 'table' ? ' active' : ''}`} onClick={() => setViewMode('table')}>Tabela</button>
           </div>
           <button className="btn primary" onClick={openCreate}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -86,87 +116,223 @@ export const MembersPage: React.FC<MembersPageProps> = ({ project }) => {
 
       <div className="kpi-grid">
         <KPI label="Pessoas ativas" value={members.length} sub={`no projeto ${project.name}`} />
-        <KPI label="Carga média" value={`${avgLoad}%`} sub="ocupação da equipe"
-          delta={avgLoad > 85 ? { dir: 'down', text: 'Alta' } : { dir: 'flat', text: 'Normal' }} />
-        <KPI label="Tarefas abertas" value={metrics.reduce((a, m) => a + m.activeTasks, 0)} sub="atribuídas" />
-        <KPI label="Performance média" value={`${avgPerf}%`} sub="concluídas / total"
-          delta={avgPerf >= 80 ? { dir: 'up', text: `${avgPerf}%` } : undefined} />
+        <KPI label="Carga média" value={`${avgLoad}%`} sub="vs sprint passada"
+          delta={avgLoad > 85 ? { dir: 'down', text: 'Alta' } : { dir: 'up', text: '+Normal' }} />
+        <KPI label="Performance" value={`${avgPerf}%`} sub="meta 85%"
+          delta={avgPerf >= 85 ? { dir: 'up', text: `+${avgPerf - 85}%` } : undefined} />
+        <KPI label="Horas/semana" value={totalHours} sub={totalWeeklyCost > 0 ? `custo ${formatCurrency(totalWeeklyCost)}` : 'sem dados'} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-        {members.map((member, idx) => {
-          const m = metricsById[member.id];
-          const load = m?.loadPercent ?? 0;
-          return (
-            <div key={member.id} className="card" style={{ padding: 16 }}>
-              <div className="row" style={{ gap: 12 }}>
-                <Avatar initials={member.initials} colorIndex={member.avatarColor} size="xl" />
-                <div className="fill" style={{ minWidth: 0 }}>
-                  <div className="b" style={{ fontSize: 14 }}>{member.name}</div>
-                  <div className="xs faint">{member.role}</div>
-                  <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                    {member.skills.slice(0, 3).map((s) => (
-                      <span key={s} className="chip purple xs">{s}</span>
-                    ))}
+      {/* ── Cards ───────────────────────────────────────── */}
+      {viewMode === 'cards' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          {members.map((member) => {
+            const m = metricsById[member.id];
+            const load = m?.loadPercent ?? 0;
+            const perf = m?.performance ?? 0;
+            const sparkPts = [perf - 10, perf - 8, perf - 5, perf - 6, perf - 3, perf - 2, perf, perf + 1].map((v) => Math.max(0, Math.min(100, v)));
+            return (
+              <div key={member.id} className="card" style={{ padding: 16 }}>
+                {/* Header */}
+                <div className="row" style={{ gap: 12 }}>
+                  <Avatar initials={member.initials} colorIndex={member.avatarColor} size="xl" />
+                  <div className="fill" style={{ minWidth: 0 }}>
+                    <div className="b" style={{ fontSize: 14 }}>{member.name}</div>
+                    <div className="xs faint">{member.role}</div>
+                    <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      {member.skills.slice(0, 3).map((s) => (
+                        <span key={s} className="chip outline xs">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* More menu */}
+                  <div style={{ position: 'relative', alignSelf: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      className="icon-btn ghost"
+                      onClick={() => setMenuId(menuId === member.id ? null : member.id)}
+                      title="Mais opções"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
+                      </svg>
+                    </button>
+                    {menuId === member.id && (
+                      <div style={{
+                        position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 20,
+                        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)', minWidth: 130, overflow: 'hidden',
+                      }}>
+                        <button
+                          style={{ display: 'block', width: '100%', padding: '8px 14px', textAlign: 'left', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                          onClick={() => openEdit(member)}
+                        >Editar</button>
+                        <button
+                          style={{ display: 'block', width: '100%', padding: '8px 14px', textAlign: 'left', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                          onClick={() => handleDelete(member)}
+                        >Remover</button>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="row" style={{ gap: 4, alignSelf: 'flex-start' }}>
-                  <button className="icon-btn ghost" onClick={() => openEdit(member)} title="Editar">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
-                  </button>
-                  <button
-                    className="icon-btn ghost"
-                    onClick={() => window.confirm(`Remover ${member.name}?`) && deleteMutation.mutate(member.id)}
-                    title="Remover"
-                    style={{ color: 'var(--danger)' }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                      <path d="M10 11v6 M14 11v6 M9 6V4h6v2" />
-                    </svg>
-                  </button>
+
+                <div className="divider" />
+
+                {/* Carga */}
+                <div>
+                  <div className="row between">
+                    <span className="xs faint">Carga esta sprint</span>
+                    <span className="xs b">{load}%</span>
+                  </div>
+                  <div className="bar thick" style={{ marginTop: 4 }}>
+                    <span style={{ width: `${Math.min(load, 100)}%`, background: load > 85 ? 'var(--warning)' : 'var(--accent)' }} />
+                  </div>
                 </div>
-              </div>
-              <div className="divider" />
-              <div>
+
+                {/* Stats grid */}
+                <div className="grid-3" style={{ marginTop: 12, gap: 4 }}>
+                  <div>
+                    <div className="xs faint">Tarefas</div>
+                    <div className="b">{m?.activeTasks ?? 0}</div>
+                  </div>
+                  <div>
+                    <div className="xs faint">Concluídas</div>
+                    <div className="b">{m?.completedTasks ?? 0}</div>
+                  </div>
+                  <div>
+                    <div className="xs faint">Custo/h</div>
+                    <div className="b" style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{formatCurrency(Number(member.hourlyCost))}</div>
+                  </div>
+                </div>
+
+                <div className="divider" />
+
+                {/* Performance + sparkline */}
                 <div className="row between">
-                  <span className="xs faint">Carga esta sprint</span>
-                  <span className="xs b">{load}%</span>
+                  <div>
+                    <div className="xs faint">Performance · 30d</div>
+                    <div className="b" style={{ color: 'var(--success)' }}>{perf}%</div>
+                  </div>
+                  <Sparkline points={sparkPts} />
                 </div>
-                <div className="bar thick" style={{ marginTop: 4 }}>
-                  <span style={{ width: `${load}%`, background: load > 85 ? 'var(--warning)' : 'var(--accent)' }} />
+
+                {/* Action buttons */}
+                <div className="row" style={{ marginTop: 12, gap: 6 }}>
+                  <button className="btn ghost sm" style={{ flex: 1 }} onClick={() => openEdit(member)}>Ver perfil</button>
+                  <button className="btn ghost sm" style={{ flex: 1 }}>Atribuir</button>
                 </div>
               </div>
-              <div className="grid-3" style={{ marginTop: 12, gap: 4 }}>
-                <div>
-                  <div className="xs faint">Tarefas</div>
-                  <div className="b">{m?.activeTasks ?? 0}</div>
-                </div>
-                <div>
-                  <div className="xs faint">Concluídas</div>
-                  <div className="b">{m?.completedTasks ?? 0}</div>
-                </div>
-                <div>
-                  <div className="xs faint">Performance</div>
-                  <div className="b" style={{ color: 'var(--success)' }}>{m?.performance ?? 0}%</div>
-                </div>
+            );
+          })}
+
+          {members.length === 0 && (
+            <div style={{ gridColumn: 'span 3', padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
+              Nenhum membro cadastrado.{' '}
+              <button className="btn sm ghost" onClick={openCreate}>Adicionar o primeiro.</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tabela ──────────────────────────────────────── */}
+      {viewMode === 'table' && (
+        <>
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div className="card-head">
+              <div className="card-title">Membros</div>
+            </div>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Pessoa</th>
+                  <th>Papel</th>
+                  <th>Tarefas</th>
+                  <th style={{ width: 200 }}>Carga atual</th>
+                  <th>Custo/h</th>
+                  <th>Concluídas</th>
+                  <th style={{ width: 160 }}>Performance</th>
+                  <th style={{ width: 80 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((member) => {
+                  const m = metricsById[member.id];
+                  const load = m?.loadPercent ?? 0;
+                  const perf = m?.performance ?? 0;
+                  return (
+                    <tr key={member.id}>
+                      <td>
+                        <div className="row" style={{ gap: 8 }}>
+                          <Avatar initials={member.initials} colorIndex={member.avatarColor} size="sm" />
+                          <div>
+                            <div className="b">{member.name}</div>
+                            <div className="xs faint">{member.skills.slice(0, 3).join(' · ')}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{member.role}</td>
+                      <td><span className="b">{m?.activeTasks ?? 0}</span> <span className="xs faint">ativas</span></td>
+                      <td>
+                        <div className="row" style={{ gap: 8 }}>
+                          <div className="bar" style={{ flex: 1 }}>
+                            <span style={{ width: `${Math.min(load, 100)}%`, background: load > 85 ? 'var(--warning)' : 'var(--accent)' }} />
+                          </div>
+                          <span className="xs b" style={{ width: 32, textAlign: 'right', flexShrink: 0 }}>{load}%</span>
+                        </div>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{formatCurrency(Number(member.hourlyCost))}</td>
+                      <td>{m?.completedTasks ?? 0}</td>
+                      <td>
+                        <div className="row" style={{ gap: 8 }}>
+                          <div className="bar" style={{ flex: 1 }}>
+                            <span style={{ width: `${perf}%`, background: 'var(--success)' }} />
+                          </div>
+                          <span className="xs b" style={{ width: 32, textAlign: 'right', flexShrink: 0 }}>{perf}%</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="row" style={{ gap: 4, justifyContent: 'flex-end' }}>
+                          <button className="btn ghost sm" onClick={() => openEdit(member)}>Editar</button>
+                          <button className="btn ghost sm" style={{ color: 'var(--danger)' }}
+                            onClick={() => { if (window.confirm(`Remover ${member.name}?`)) deleteMutation.mutate(member.id); }}>✕</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {members.length === 0 && (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>Nenhum membro cadastrado.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Skills panel */}
+          {allSkills.length > 0 && (
+            <div className="card">
+              <div className="card-head">
+                <div className="card-title">Skills no time</div>
+                <span className="card-sub">{allSkills.length} {allSkills.length === 1 ? 'área coberta' : 'áreas cobertas'}</span>
+              </div>
+              <div className="card-body" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {allSkills.map((skill) => {
+                  const count = members.filter((m) => m.skills.includes(skill)).length;
+                  return (
+                    <span key={skill} className="chip purple">
+                      {skill} <span className="xs" style={{ opacity: 0.7 }}>· {count}</span>
+                    </span>
+                  );
+                })}
               </div>
             </div>
-          );
-        })}
+          )}
+        </>
+      )}
 
-        {members.length === 0 && (
-          <div style={{ gridColumn: 'span 3', padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
-            Nenhum membro cadastrado.{' '}
-            <button className="btn sm ghost" onClick={openCreate}>Adicionar o primeiro.</button>
-          </div>
-        )}
-      </div>
-
-      {/* Modal */}
+      {/* ── Modal ───────────────────────────────────────── */}
       {dialogOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)' }}>
           <div className="card" style={{ width: '100%', maxWidth: 420, padding: 24, background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 16 }}>

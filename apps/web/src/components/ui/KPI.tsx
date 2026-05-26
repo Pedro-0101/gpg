@@ -12,14 +12,15 @@ interface KPIProps {
     dir?: 'up' | 'down' | 'flat';
   };
   className?: string;
+  accentColor?: string;
 }
 
-export const KPI: React.FC<KPIProps> = ({ label, value, sub, delta, className }) => {
+export const KPI: React.FC<KPIProps> = ({ label, value, sub, delta, className, accentColor }) => {
   const dir = delta?.dir ?? delta?.trend ?? 'flat';
   const deltaText = delta?.text ?? (delta?.value != null ? String(delta.value) : '');
 
   return (
-    <div className={cn('card kpi', className)}>
+    <div className={cn('card kpi', className)} style={accentColor ? { borderTop: `2px solid ${accentColor}` } : undefined}>
       <div className="label">{label}</div>
       <div className="value">
         {value}
