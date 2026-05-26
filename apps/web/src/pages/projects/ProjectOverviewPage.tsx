@@ -13,6 +13,7 @@ import { differenceInCalendarDays } from 'date-fns';
 interface ProjectOverviewPageProps { project: any; }
 
 function BudgetChart({ project }: { project: any }) {
+  const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
   const allSubs = (project.stages ?? []).flatMap((s: any) =>
     (s.topics ?? []).flatMap((t: any) => (t.subtopics ?? []).map((sub: any) => ({
       endDate: sub.endDate as string | null,
@@ -36,7 +37,7 @@ function BudgetChart({ project }: { project: any }) {
 
   const cursor = new Date(projectStart.getFullYear(), projectStart.getMonth(), 1);
   const endMonth = new Date(projectEnd.getFullYear(), projectEnd.getMonth() + 1, 0);
-  const points: Array<{ label: string; planned: number; spent: number }> = [];
+  const points: Array<{ label: string; fullLabel: string; planned: number; spent: number }> = [];
 
   while (cursor <= endMonth) {
     const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59);
@@ -48,8 +49,10 @@ function BudgetChart({ project }: { project: any }) {
         if (sub.done) spent += sub.cost;
       }
     }
+    
     points.push({
-      label: cursor.toLocaleDateString('pt-BR', { month: 'short' }),
+      label: cursor.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+      fullLabel: cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
       planned,
       spent,
     });
@@ -59,12 +62,28 @@ function BudgetChart({ project }: { project: any }) {
   if (points.length < 2) return null;
 
   const maxVal = Math.max(...points.map(p => p.planned), 1);
-  const W = 600, H = 150, PX = 6, PY = 10, LH = 16;
+  const W = 1200, H = 320, PX = 40, PY = 30, LH = 24;
   const cH = H - PY * 2 - LH;
   const cW = W - PX * 2;
 
   const xPos = (i: number) => PX + (i / (points.length - 1)) * cW;
   const yPos = (v: number) => PY + cH - (v / maxVal) * cH;
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * W;
+    
+    let bestIdx = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const dist = Math.abs(xPos(i) - x);
+      if (dist < minDist) {
+        minDist = dist;
+        bestIdx = i;
+      }
+    }
+    setHoveredIdx(bestIdx);
+  };
 
   const pathLine = (vals: number[]) =>
     vals.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i).toFixed(1)} ${yPos(v).toFixed(1)}`).join(' ');
@@ -78,40 +97,85 @@ function BudgetChart({ project }: { project: any }) {
   const todayFrac = Math.max(0, Math.min(1, elapsedMs / totalMs));
   const todayX = PX + todayFrac * cW;
 
-  const labelStep = points.length <= 8 ? 1 : Math.ceil(points.length / 6);
+  const labelStep = Math.max(1, Math.ceil(points.length / 12));
 
   return (
-    <div>
-      <div className="row" style={{ gap: 20, marginBottom: 10, fontSize: 12 }}>
-        <span className="row" style={{ gap: 5, alignItems: 'center' }}>
-          <span style={{ width: 24, height: 2, background: 'var(--border)', display: 'inline-block', borderRadius: 2 }} />
-          <span className="xs faint">Previsto</span>
+    <div style={{ position: 'relative', width: '100%' }}>
+      <div className="row" style={{ gap: 24, marginBottom: 16, fontSize: 13 }}>
+        <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+          <span style={{ width: 14, height: 14, background: 'var(--accent)', opacity: 0.1, borderRadius: 3, border: '1px dashed var(--text-3)' }} />
+          <span className="faint">Orçamento Previsto</span>
         </span>
-        <span className="row" style={{ gap: 5, alignItems: 'center' }}>
-          <span style={{ width: 24, height: 3, background: 'var(--accent)', display: 'inline-block', borderRadius: 2 }} />
-          <span className="xs faint">Realizado</span>
+        <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+          <span style={{ width: 14, height: 14, background: 'var(--accent)', opacity: 0.4, borderRadius: 3 }} />
+          <span className="faint">Custo Realizado</span>
         </span>
-        <span className="row" style={{ gap: 5, alignItems: 'center' }}>
-          <span style={{ width: 14, height: 2, background: 'var(--danger)', display: 'inline-block', borderRadius: 2 }} />
-          <span className="xs faint">Hoje</span>
+        <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+          <span style={{ width: 2, height: 14, background: 'var(--danger)', borderLeft: '2px dashed var(--danger)' }} />
+          <span className="faint">Hoje</span>
         </span>
       </div>
-      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <svg 
+        width="100%" height={H} viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredIdx(null)}
+        style={{ overflow: 'visible', cursor: 'crosshair', display: 'block' }}
+      >
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map(p => (
+          <line key={p} x1={PX} y1={yPos(maxVal * p)} x2={W - PX} y2={yPos(maxVal * p)} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="6 4" />
+        ))}
+
         {/* Planned area (light fill, dashed line) */}
-        <path d={pathArea(points.map(p => p.planned))} fill="var(--accent)" fillOpacity="0.07" />
-        <path d={pathLine(points.map(p => p.planned))} fill="none" stroke="var(--text-3)" strokeWidth="1.5" strokeDasharray="5 4" />
+        <path d={pathArea(points.map(p => p.planned))} fill="var(--accent)" fillOpacity="0.05" />
+        <path d={pathLine(points.map(p => p.planned))} fill="none" stroke="var(--text-3)" strokeWidth="1.2" strokeDasharray="5 5" strokeOpacity="0.4" />
+        
         {/* Spent area (solid fill, accent line) */}
-        <path d={pathArea(points.map(p => p.spent))} fill="var(--accent)" fillOpacity="0.35" />
-        <path d={pathLine(points.map(p => p.spent))} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" />
+        <path d={pathArea(points.map(p => p.spent))} fill="var(--accent)" fillOpacity="0.15" />
+        <path d={pathLine(points.map(p => p.spent))} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinejoin="round" />
+        
         {/* Today marker */}
-        <line x1={todayX} y1={PY} x2={todayX} y2={PY + cH} stroke="var(--danger)" strokeWidth="1.5" strokeDasharray="3 2" strokeOpacity="0.7" />
+        <line x1={todayX} y1={PY} x2={todayX} y2={PY + cH} stroke="var(--danger)" strokeWidth="2" strokeDasharray="4 3" />
+        
         {/* Baseline */}
-        <line x1={PX} y1={PY + cH} x2={W - PX} y2={PY + cH} stroke="var(--border)" strokeWidth="1" />
+        <line x1={PX} y1={PY + cH} x2={W - PX} y2={PY + cH} stroke="var(--border-strong)" strokeWidth="1.5" />
+        
         {/* X labels */}
-        {points.map((p, i) =>
-          i % labelStep === 0 || i === points.length - 1 ? (
-            <text key={i} x={xPos(i)} y={H - 2} textAnchor="middle" fontSize="9" fill="var(--text-3)">{p.label}</text>
-          ) : null
+        {points.map((p, i) => {
+          const isLast = i === points.length - 1;
+          const isStep = i % labelStep === 0;
+          if (!isStep && !isLast) return null;
+          
+          // Avoid showing last label if it's too close to the previous step label
+          if (isLast && !isStep && (i % labelStep) < (labelStep / 2)) return null;
+
+          let anchor = "middle";
+          if (i === 0) anchor = "start";
+          else if (i === points.length - 1) anchor = "end";
+
+          return (
+            <text key={i} x={xPos(i)} y={H - 6} textAnchor={anchor} fontSize="11" fill="var(--text-3)" fontWeight="500">{p.label}</text>
+          );
+        })}
+
+        {/* Transparent hit area to capture mouse events across the whole SVG */}
+        <rect width={W} height={H} fill="transparent" />
+
+        {/* Hover elements */}
+        {hoveredIdx !== null && (
+          <g style={{ pointerEvents: 'none' }}>
+            <line x1={xPos(hoveredIdx)} y1={PY} x2={xPos(hoveredIdx)} y2={PY + cH} stroke="var(--accent)" strokeWidth="2" strokeDasharray="5 3" />
+            <circle cx={xPos(hoveredIdx)} cy={yPos(points[hoveredIdx].planned)} r="5" fill="white" stroke="var(--text-3)" strokeWidth="2" />
+            <circle cx={xPos(hoveredIdx)} cy={yPos(points[hoveredIdx].spent)} r="5" fill="white" stroke="var(--accent)" strokeWidth="2.5" />
+            
+            <g transform={`translate(${xPos(hoveredIdx) > W / 2 ? xPos(hoveredIdx) - 165 : xPos(hoveredIdx) + 15}, ${PY + 20})`}>
+              <rect width="150" height="64" rx="8" fill="white" stroke="var(--border-strong)" strokeWidth="1" style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))' }} />
+              <text x="12" y="22" fontSize="12" fontWeight="700" fill="var(--text)">{points[hoveredIdx].fullLabel}</text>
+              <text x="12" y="40" fontSize="11" fill="var(--text-2)">Previsto: <tspan fontWeight="600" fill="var(--text)">{formatCurrency(points[hoveredIdx].planned)}</tspan></text>
+              <text x="12" y="54" fontSize="11" fill="var(--text-2)">Realizado: <tspan fontWeight="700" fill="var(--accent)">{formatCurrency(points[hoveredIdx].spent)}</tspan></text>
+            </g>
+          </g>
         )}
       </svg>
     </div>
