@@ -1,18 +1,1 @@
-{
-  "mcpServers": {
-    "gpg-local": {
-      "command": "pnpm",
-      "args": ["--filter", "@gpg/mcp", "start"],
-      "env": {
-        "API_URL": "http://localhost:3001/api/v1"
-      }
-    },
-    "gpg-prod": {
-      "command": "pnpm",
-      "args": ["--filter", "@gpg/mcp", "start"],
-      "env": {
-        "API_URL": "https://SEU-APP.railway.app/api/v1"
-      }
-    }
-  }
-}
+{}
