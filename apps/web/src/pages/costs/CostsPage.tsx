@@ -69,6 +69,7 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [period, setPeriod]     = useState<Period>('mês');
+  const [hoverData, setHoverData] = useState<{ index: number; x: number } | null>(null);
 
   const { data: entries = [] } = useQuery({
     queryKey: ['costs', project.id],
@@ -369,11 +370,11 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
         </div>
         <div className="card-body" style={{ padding: '16px 20px' }}>
           {realData.length < 2 ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-3)' }}>
+            <div style={{ padding: '400px 0', textAlign: 'center', color: 'var(--text-3)' }}>
               Registre lançamentos para ver a curva financeira.
             </div>
           ) : (() => {
-            const W = 640, H = 220, PL = 54, PR = 12, PT = 20, PB = 28;
+            const W = 1000, H = 340, PL = 54, PR = 12, PT = 20, PB = 28;
             const chartW = W - PL - PR;
             const chartH = H - PT - PB;
             const n      = realData.length;
@@ -384,7 +385,19 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
             const todayX  = toX(n - 1);
             const yLabels = [0, 0.25, 0.5, 0.75, 1].map((f) => f * yMax);
             return (
-              <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H }}>
+              <svg
+                viewBox={`0 0 ${W} ${H}`}
+                style={{ width: '100%', height: 'auto', maxHeight: 400, cursor: 'crosshair' }}
+                onMouseMove={(e) => {
+                  const svg = e.currentTarget;
+                  const rect = svg.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * W;
+                  if (x < PL || x > W - PR) { setHoverData(null); return; }
+                  const idx = Math.round(((x - PL) / chartW) * (n - 1));
+                  if (idx >= 0 && idx < n) setHoverData({ index: idx, x: toX(idx) });
+                }}
+                onMouseLeave={() => setHoverData(null)}
+              >
                 <defs>
                   <linearGradient id="cost-area-grad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22" />
@@ -408,6 +421,22 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
                   fill="url(#cost-area-grad)" />
                 <polyline points={realPts} fill="none" stroke="var(--accent)" strokeWidth="2.5"
                   strokeLinejoin="round" strokeLinecap="round" />
+
+                {hoverData && (
+                  <g>
+                    <line x1={hoverData.x} y1={PT} x2={hoverData.x} y2={PT + chartH}
+                      stroke="var(--accent)" strokeWidth="1" strokeDasharray="4 2" />
+                    <circle cx={hoverData.x} cy={toY(realData[hoverData.index])} r="5" fill="var(--accent)" stroke="white" strokeWidth="2" />
+                    <g transform={`translate(${hoverData.x + (hoverData.x > W - 130 ? -120 : 10)}, ${toY(realData[hoverData.index]) - 45})`}>
+                      <rect width="110" height="36" rx="6" fill="var(--surface)" stroke="var(--border)" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }} />
+                      <text x="55" y="16" textAnchor="middle" fontSize="10" fill="var(--text-3)">{months[hoverData.index]}</text>
+                      <text x="55" y="28" textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--text)">
+                        {formatCurrency(realData[hoverData.index])}
+                      </text>
+                    </g>
+                  </g>
+                )}
+
                 <line x1={todayX} y1={PT} x2={todayX} y2={PT + chartH}
                   stroke="var(--danger)" strokeWidth="1.5" strokeDasharray="3 3" />
                 <rect x={todayX - 14} y={PT} width={28} height={14} rx="3" fill="var(--danger)" />
@@ -590,7 +619,27 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
               <tr key={entry.id}>
                 <td className="xs faint mono">{formatDate(entry.date)}</td>
                 <td className="b">{entry.description}</td>
-                <td>{entry.stage && <span className="chip outline xs">{entry.stage.name}</span>}</td>
+                <td>
+                  {entry.stage && (() => {
+                    const idx = stages.findIndex((s: any) => s.id === entry.stageId);
+                    const pal = idx >= 0 ? STAGE_PALETTE[idx % STAGE_PALETTE.length] : null;
+                    return (
+                      <div className="row" style={{ gap: 6 }}>
+                        {idx >= 0 && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '1px 5px', borderRadius: 4, fontSize: 9, fontWeight: 700,
+                            background: pal?.soft || 'var(--surface-3)', color: pal?.color || 'var(--text-2)',
+                            border: `1px solid ${pal?.color}33`,
+                          }}>
+                            E{idx + 1}
+                          </span>
+                        )}
+                        <span className="xs b">{entry.stage.name}</span>
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td>
                   <span className="chip xs" style={{
                     background: `color-mix(in srgb, ${CAT_COLORS[entry.category] ?? 'var(--text-3)'} 12%, transparent)`,
