@@ -235,13 +235,14 @@ export async function importCsvRows(
           durationHours: row.tempo,
           isConcurrent: row.tipo === 'concomitante',
           teamIds,
+          professionalIds: [],
           order: (topic.subtopics?.length ?? 0) + 1,
           status: 'todo',
           progress: 0,
           spentHours: 0,
           taskType: 'task',
           priority: 'med',
-        }) as any;
+        });
         // Add to cache to catch duplicates within the same import batch
         subtopicByKey.set(subKey, newSub);
         topic.subtopics = [...(topic.subtopics ?? []), newSub];
