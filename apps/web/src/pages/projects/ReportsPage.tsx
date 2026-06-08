@@ -119,17 +119,19 @@ function BurndownLine({ entries, plannedCost, startDate, endDate }: {
   const todayX = xPos(today);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none">
-      <path d={idealPath} fill="none" stroke="var(--text-3)" strokeWidth="1.5" strokeDasharray="4 3" />
-      <path d={realPath} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-      {todayX >= PX && todayX <= W - PX && (
-        <>
-          <line x1={todayX} y1={PY} x2={todayX} y2={PY + cH} stroke="var(--danger)" strokeWidth="1.5" strokeDasharray="3 2" />
-          <text x={todayX + 3} y={PY + 10} fontSize="9" fill="var(--danger)">hoje</text>
-        </>
-      )}
-      <line x1={PX} y1={PY + cH} x2={W - PX} y2={PY + cH} stroke="var(--border)" strokeWidth="1" />
-    </svg>
+    <div style={{ width: '100%', aspectRatio: `${W}/${H}` }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+        <path d={idealPath} fill="none" stroke="var(--text-3)" strokeWidth="1.5" strokeDasharray="4 3" />
+        <path d={realPath} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+        {todayX >= PX && todayX <= W - PX && (
+          <>
+            <line x1={todayX} y1={PY} x2={todayX} y2={PY + cH} stroke="var(--danger)" strokeWidth="1.5" strokeDasharray="3 2" />
+            <text x={todayX + 3} y={PY + 10} fontSize="9" fill="var(--danger)">hoje</text>
+          </>
+        )}
+        <line x1={PX} y1={PY + cH} x2={W - PX} y2={PY + cH} stroke="var(--border)" strokeWidth="1" />
+      </svg>
+    </div>
   );
 }
 

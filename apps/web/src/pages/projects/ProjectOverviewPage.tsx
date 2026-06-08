@@ -1,11 +1,12 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { KPI } from '../../components/ui/KPI';
 import { Avatar, AvatarStack } from '../../components/ui/Avatar';
 import { StatusChip } from '../../components/ui/StatusChip';
 import { costsApi } from '../../api/costs';
 import { milestonesApi } from '../../api/risks-milestones';
+import { projectsApi } from '../../api/projects';
 import { calcSubtopicCost } from '../../lib/cost';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { differenceInCalendarDays } from 'date-fns';
@@ -100,7 +101,7 @@ function BudgetChart({ project }: { project: any }) {
   const labelStep = Math.max(1, Math.ceil(points.length / 12));
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div style={{ position: 'relative', width: '100%', aspectRatio: `${W}/${H}`, maxWidth: '100%' }}>
       <div className="row" style={{ gap: 24, marginBottom: 16, fontSize: 13 }}>
         <span className="row" style={{ gap: 8, alignItems: 'center' }}>
           <span style={{ width: 14, height: 14, background: 'var(--accent)', opacity: 0.1, borderRadius: 3, border: '1px dashed var(--text-3)' }} />
@@ -116,8 +117,8 @@ function BudgetChart({ project }: { project: any }) {
         </span>
       </div>
       <svg 
-        width="100%" height={H} viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
+        width="100%" height="100%" viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="xMidYMid meet"
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredIdx(null)}
         style={{ overflow: 'visible', cursor: 'crosshair', display: 'block' }}
@@ -150,7 +151,7 @@ function BudgetChart({ project }: { project: any }) {
           // Avoid showing last label if it's too close to the previous step label
           if (isLast && !isStep && (i % labelStep) < (labelStep / 2)) return null;
 
-          let anchor = "middle";
+          let anchor: "start" | "middle" | "end" = "middle";
           if (i === 0) anchor = "start";
           else if (i === points.length - 1) anchor = "end";
 
@@ -183,6 +184,7 @@ function BudgetChart({ project }: { project: any }) {
 }
 
 export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ project }) => {
+  const queryClient = useQueryClient();
   const { data: costsSummary } = useQuery({
     queryKey: ['costs', project.id, 'summary'],
     queryFn: () => costsApi.summary(project.id),
@@ -190,6 +192,13 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
   const { data: milestones = [] } = useQuery({
     queryKey: ['milestones', project.id],
     queryFn: () => milestonesApi.list(project.id),
+  });
+
+  const recalcMut = useMutation({
+    mutationFn: () => projectsApi.recalculate(project.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] });
+    },
   });
 
   const allSubtopics = (project.stages ?? []).flatMap((s: any) =>
@@ -455,6 +464,26 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
                 </svg>
               </Link>
             ))}
+            <button
+              onClick={() => recalcMut.mutate()}
+              disabled={recalcMut.isPending}
+              style={{
+                padding: '10px 12px', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', gap: 10,
+                cursor: recalcMut.isPending ? 'wait' : 'pointer',
+                background: 'none', font: 'inherit', width: '100%', textAlign: 'left',
+              }}
+            >
+              <span className="fill small b">
+                {recalcMut.isPending ? 'Recalculando...' : recalcMut.isSuccess ? 'Recalculado ✓' : 'Recalcular cronograma'}
+              </span>
+              {!recalcMut.isPending && !recalcMut.isSuccess && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </div>
