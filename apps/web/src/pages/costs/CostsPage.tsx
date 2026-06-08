@@ -6,7 +6,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { costsApi } from '../../api/costs';
 import { membersApi } from '../../api/members';
 import { stagesApi } from '../../api/stages';
-import { calcStageCost } from '../../lib/cost';
+import { calcStageCost, calcStageDoneCost } from '../../lib/cost';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import type { Project, CostEntry, CostSummary } from '../../types';
 
@@ -119,10 +119,12 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
     return (stages as any[]).map((s: any, i: number) => {
       const pal     = STAGE_PALETTE[i % STAGE_PALETTE.length];
       const planned = calcStageCost(s);
-      const actual  = filteredEntries.filter((e) => e.stageId === s.id).reduce((n, e) => n + Number(e.amount), 0);
+      const tasksDone = calcStageDoneCost(s);
+      const manual  = (entries as CostEntry[]).filter((e) => e.stageId === s.id).reduce((n, e) => n + Number(e.amount), 0);
+      const actual  = tasksDone + manual;
       return { name: s.name, planned, actual, ...pal };
     }).filter((s) => s.planned > 0 || s.actual > 0);
-  }, [stages, filteredEntries]);
+  }, [stages, entries]);
 
   const allEntries  = entries as CostEntry[];
   const monthsMap: Record<string, number> = {};
