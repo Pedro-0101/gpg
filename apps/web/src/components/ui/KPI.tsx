@@ -21,8 +21,8 @@ export const KPI: React.FC<KPIProps> = ({ label, value, sub, delta, className, a
 
   return (
     <div className={cn('card kpi', className)} style={accentColor ? { borderTop: `2px solid ${accentColor}` } : undefined}>
-      <div className="label">{label}</div>
-      <div className="value">
+      <div className="label" title={label}>{label}</div>
+      <div className="value" title={String(value)}>
         {value}
         {delta && (
           <span className={cn('delta', dir)}>
@@ -30,7 +30,7 @@ export const KPI: React.FC<KPIProps> = ({ label, value, sub, delta, className, a
           </span>
         )}
       </div>
-      {sub && <div className="sub">{sub}</div>}
+      {sub && <div className="sub" title={sub}>{sub}</div>}
     </div>
   );
 };
