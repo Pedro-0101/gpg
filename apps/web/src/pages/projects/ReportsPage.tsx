@@ -97,7 +97,7 @@ function BurndownLine({ entries, plannedCost, startDate, endDate }: {
   const totalMs = end.getTime() - start.getTime();
   if (totalMs <= 0) return null;
 
-  const W = 400, H = 100, PX = 8, PY = 10;
+  const W = 400, H = 160, PX = 8, PY = 10;
   const cW = W - PX * 2, cH = H - PY * 2;
   const today = new Date();
 
@@ -196,6 +196,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
   const balance     = plannedCost - doneCost;
 
   const pendingDecisions = (decisions as Decision[]).filter((d) => d.status === 'pending');
+  const resolvedDecisions = (decisions as Decision[]).filter((d) => d.status === 'done' || d.status === 'resolved');
   const overloadedMembers = (memberMetrics as MemberMetrics[]).filter((m) => m.loadPercent > 85);
 
   const upcomingMilestones = (milestones as any[])
@@ -432,9 +433,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
           {/* Header */}
           <div style={{ paddingBottom: 24, borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
             <div className="row" style={{ gap: 8, marginBottom: 14 }}>
-              <span className="chip outline xs">SEMANA {weekNumber}</span>
-              <span className="chip outline xs">{formatDate(today.toISOString())}</span>
-              <span className="chip outline xs">Status Report · {project.name}</span>
+              <span style={{ background: 'var(--accent)', color: 'white', padding: '3px 10px', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>SEMANA {weekNumber}</span>
+              <span style={{ background: 'var(--surface-3)', color: 'var(--text-2)', padding: '3px 10px', borderRadius: 4, fontSize: 10, fontWeight: 600 }}>{formatDate(today.toISOString())}</span>
+              <span style={{ background: 'var(--surface-3)', color: 'var(--text-2)', padding: '3px 10px', borderRadius: 4, fontSize: 10, fontWeight: 600 }}>Status Report · {project.name}</span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 10 }}>
               {headline}
@@ -490,20 +491,20 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
               <div className="card-body">
                 {(costEntries as CostEntry[]).length > 0 ? (
                   <>
-                    <div className="row" style={{ gap: 16, marginBottom: 10 }}>
+                    <div className="row" style={{ gap: 24, marginBottom: 20 }}>
                       <div>
-                        <div className="xs faint">REALIZADO</div>
-                        <div style={{ fontSize: 22, fontWeight: 700 }}>{formatCurrency(doneCost || totalSpent)}</div>
-                        {plannedCost > 0 && <div className="xs faint">{burnRate}% do planejado</div>}
+                        <div className="xs faint" style={{ letterSpacing: '0.05em' }}>REALIZADO</div>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)' }}>{formatCurrency(doneCost || totalSpent)}</div>
+                        {plannedCost > 0 && <div className="xs b" style={{ color: burnRate > 100 ? 'var(--danger)' : 'var(--text-3)', marginTop: 2 }}>{burnRate}% do planejado</div>}
                       </div>
                       {plannedCost > 0 && (
-                        <div style={{ flex: 1 }}>
-                          <div className="bar thick" style={{ marginTop: 18 }}>
-                            <span style={{ width: `${Math.min(burnRate, 100)}%`, background: burnRate > 80 ? 'var(--warning)' : 'var(--accent)' }} />
+                        <div style={{ flex: 1, paddingTop: 12 }}>
+                          <div className="bar thick" style={{ height: 10, background: 'var(--surface-3)' }}>
+                            <span style={{ width: `${Math.min(burnRate, 100)}%`, background: burnRate > 90 ? 'var(--danger)' : burnRate > 75 ? 'var(--warning)' : 'var(--success)' }} />
                           </div>
-                          <div className="row between" style={{ marginTop: 4 }}>
-                            <span className="xs faint">0</span>
-                            <span className="xs faint">{formatCurrency(plannedCost)}</span>
+                          <div className="row between" style={{ marginTop: 6 }}>
+                            <span className="xs faint">Início</span>
+                            <span className="xs faint">Meta: {formatCurrency(plannedCost)}</span>
                           </div>
                         </div>
                       )}
@@ -555,16 +556,20 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
             )}
           </ExecSection>
 
-          {/* 04 — Decisões pendentes */}
-          <ExecSection n="04" title="Decisões pendentes">
+          {/* 04 — Decisões e Resoluções */}
+          <ExecSection n="04" title="Decisões e Resoluções">
             <p style={{ color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 14 }}>
               {pendingDecisions.length === 0
                 ? 'Nenhuma decisão pendente no momento. O projeto pode avançar sem bloqueios conhecidos.'
                 : `${pendingDecisions.length} decisão${pendingDecisions.length > 1 ? 'ões' : ''} aguardando resolução.`
               }
             </p>
-            {pendingDecisions.length > 0 ? (
-              <div className="card">
+            
+            {pendingDecisions.length > 0 && (
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div className="card-head" style={{ padding: '8px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                  <span className="xs b" style={{ color: 'var(--warning)', letterSpacing: '0.05em' }}>AGUARDANDO DECISÃO</span>
+                </div>
                 <div className="card-body flush">
                   {pendingDecisions.map((d) => (
                     <div key={d.id} className="list-item">
@@ -579,7 +584,28 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
                   ))}
                 </div>
               </div>
-            ) : (
+            )}
+
+            {resolvedDecisions.length > 0 && (
+              <div className="card">
+                <div className="card-head" style={{ padding: '8px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                  <span className="xs b" style={{ color: 'var(--success)', letterSpacing: '0.05em' }}>RESOLVIDAS RECENTEMENTE</span>
+                </div>
+                <div className="card-body flush">
+                  {resolvedDecisions.map((d) => (
+                    <div key={d.id} className="list-item">
+                      <span className="xs" style={{ color: 'var(--success)', flexShrink: 0 }}>✓</span>
+                      <div className="fill">
+                        <div className="small" style={{ color: 'var(--text-2)' }}>{d.title}</div>
+                      </div>
+                      <span className="xs faint">resolvida</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {pendingDecisions.length === 0 && resolvedDecisions.length === 0 && (
               <div className="card" style={{ padding: '12px 16px', background: 'color-mix(in srgb, var(--success) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 20%, transparent)' }}>
                 <span style={{ color: 'var(--success)', fontSize: 13 }}>✓ Nenhuma decisão pendente. Ótimo!</span>
               </div>

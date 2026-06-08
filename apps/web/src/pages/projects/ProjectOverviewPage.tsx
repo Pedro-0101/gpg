@@ -170,8 +170,8 @@ function BudgetChart({ project }: { project: any }) {
             <circle cx={xPos(hoveredIdx)} cy={yPos(points[hoveredIdx].planned)} r="5" fill="white" stroke="var(--text-3)" strokeWidth="2" />
             <circle cx={xPos(hoveredIdx)} cy={yPos(points[hoveredIdx].spent)} r="5" fill="white" stroke="var(--accent)" strokeWidth="2.5" />
             
-            <g transform={`translate(${xPos(hoveredIdx) > W / 2 ? xPos(hoveredIdx) - 165 : xPos(hoveredIdx) + 15}, ${PY + 20})`}>
-              <rect width="150" height="64" rx="8" fill="white" stroke="var(--border-strong)" strokeWidth="1" style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))' }} />
+            <g transform={`translate(${xPos(hoveredIdx) > W / 2 ? xPos(hoveredIdx) - 195 : xPos(hoveredIdx) + 15}, ${PY + 20})`}>
+              <rect width="180" height="64" rx="8" fill="white" stroke="var(--border-strong)" strokeWidth="1" style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))' }} />
               <text x="12" y="22" fontSize="12" fontWeight="700" fill="var(--text)">{points[hoveredIdx].fullLabel}</text>
               <text x="12" y="40" fontSize="11" fill="var(--text-2)">Previsto: <tspan fontWeight="600" fill="var(--text)">{formatCurrency(points[hoveredIdx].planned)}</tspan></text>
               <text x="12" y="54" fontSize="11" fill="var(--text-2)">Realizado: <tspan fontWeight="700" fill="var(--accent)">{formatCurrency(points[hoveredIdx].spent)}</tspan></text>

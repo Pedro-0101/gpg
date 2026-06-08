@@ -94,6 +94,9 @@ export async function getMetrics(projectId: string) {
             },
           },
         },
+        subtopics: {
+          include: { subtopic: true },
+        },
       },
     }),
     prisma.project.findUnique({ where: { id: projectId }, select: { dailyHours: true } }),
@@ -107,13 +110,20 @@ export async function getMetrics(projectId: string) {
   const wEnd = weekEnd(now);
 
   return professionals.map((prof) => {
-    // Deduplicate subtopics — professional may be in multiple teams on the same task
-    const subtopicMap = new Map<string, typeof prof.teams[0]['team']['subtopics'][0]['subtopic']>();
+    // Deduplicate subtopics — professional may be in multiple teams or direct assigned
+    const subtopicMap = new Map<string, any>();
+    
+    // From teams
     for (const tp of prof.teams) {
       for (const st of tp.team.subtopics) {
         subtopicMap.set(st.subtopic.id, st.subtopic);
       }
     }
+    // Direct assignments
+    for (const sp of (prof as any).subtopics || []) {
+      subtopicMap.set(sp.subtopic.id, sp.subtopic);
+    }
+
     const subtopics = Array.from(subtopicMap.values());
 
     const activeTasks = subtopics.filter((s) => s.status !== 'done').length;
@@ -126,7 +136,17 @@ export async function getMetrics(projectId: string) {
     // Hours scheduled for this professional during the current week (Mon–Fri)
     const activeHours = subtopics
       .filter((s) => s.status !== 'done')
-      .reduce((acc, s) => acc + proRatedHours(s.startDate, s.endDate, s.durationHours, wStart, wEnd), 0);
+      .reduce((acc, s) => {
+        let taskHours = proRatedHours(s.startDate, s.endDate, s.durationHours, wStart, wEnd);
+        
+        // Fallback: if no dates but status is 'inprog', assume it takes 20% of its duration this week
+        // or at least some minimal hours if it has duration.
+        if (taskHours === 0 && s.status === 'inprog' && s.durationHours > 0) {
+          taskHours = Math.min(s.durationHours, dailyHours * 2); // Assume max 2 days of work if no dates
+        }
+        
+        return acc + taskHours;
+      }, 0);
 
     const loadPercent = weekCapacity > 0
       ? Math.min(Math.round((activeHours / weekCapacity) * 100), 200)
