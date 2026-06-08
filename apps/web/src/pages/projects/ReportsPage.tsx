@@ -196,7 +196,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
   const balance     = plannedCost - doneCost;
 
   const pendingDecisions = (decisions as Decision[]).filter((d) => d.status === 'pending');
-  const resolvedDecisions = (decisions as Decision[]).filter((d) => d.status === 'done' || d.status === 'resolved');
+  const resolvedDecisions = (decisions as Decision[]).filter((d) => d.status === 'decided');
   const overloadedMembers = (memberMetrics as MemberMetrics[]).filter((m) => m.loadPercent > 85);
 
   const upcomingMilestones = (milestones as any[])
