@@ -53,7 +53,14 @@ const viewConfigs = {
 
 export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
   const [viewMode, setViewMode] = React.useState<ViewMode>('month');
+  const [cursorX, setCursorX] = React.useState<number | null>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleMouseMoveGantt = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    setCursorX(x);
+  };
 
   const { data: stages = [] } = useQuery({
     queryKey: ['stages', project.id],
@@ -92,6 +99,18 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
   const totalW = config.totalDays * config.dayW;
   const todayX = differenceInDays(new Date(), origin) * config.dayW;
 
+  const weekendBars = React.useMemo(() => {
+    if (viewMode !== 'day') return [];
+    const dayW = config.dayW;
+    return columns
+      .map((c, i) => ({ day: c.getDay(), i }))
+      .filter(({ day }) => day === 0 || day === 6)
+      .map(({ i }) => ({
+        left: i * dayW,
+        width: dayW,
+      }));
+  }, [columns, config, viewMode]);
+
   const getX = (date: string | Date) => {
     return Math.max(0, differenceInDays(new Date(date), origin)) * config.dayW;
   };
@@ -108,6 +127,29 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
 
   const activeRisks = (risks as Risk[]).filter((r) => r.status === 'active');
   const STAGE_COLORS = ['var(--text)', 'var(--accent)', 'var(--success)', 'var(--purple)'];
+
+  const [tooltip, setTooltip] = React.useState<{
+    x: number; y: number;
+    title: string;
+    description?: string | null;
+    type?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    priority?: string;
+    status?: string;
+    progress?: number;
+    responsible?: string;
+  } | null>(null);
+
+  const handleTooltipEnter = (e: React.MouseEvent, data: { title: string; description?: string | null; type?: string; startDate?: string | null; endDate?: string | null; priority?: string; status?: string; progress?: number; responsible?: string }) => {
+    setTooltip({ x: e.clientX, y: e.clientY, ...data });
+  };
+  const handleTooltipMove = (e: React.MouseEvent) => {
+    setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+  };
+  const handleTooltipLeave = () => {
+    setTooltip(null);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -134,6 +176,27 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
           display: block;
           height: 100%;
           width: 100%;
+        }
+        .gantt-bar.high-prio {
+          border: 1.5px solid var(--danger) !important;
+          box-shadow: 0 0 4px var(--danger-soft);
+          z-index: 10;
+        }
+        .subtopic-row.high-prio-row {
+          /* background removed as requested */
+        }
+        .gantt-row:hover {
+          background-color: var(--surface-3) !important;
+        }
+        .gantt-cursor-line {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 1px;
+          background-color: var(--text-3);
+          opacity: 0.3;
+          pointer-events: none;
+          z-index: 20;
         }
       `}</style>
       <div className="page-head">
@@ -164,10 +227,30 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
           </div>
         </div>
         <div ref={scrollContainerRef} style={{ overflowX: 'auto' }}>
-          <div className="gantt-wrap" style={{ minWidth: LABEL_W + totalW }}>
+          <div 
+            className="gantt-wrap" 
+            style={{ minWidth: LABEL_W + totalW, position: 'relative' }}
+            onMouseMove={handleMouseMoveGantt}
+            onMouseLeave={() => setCursorX(null)}
+          >
+            {cursorX !== null && cursorX > LABEL_W && (
+              <div className="gantt-cursor-line" style={{ left: cursorX }} />
+            )}
             {todayX > 0 && todayX < totalW && (
               <div className="gantt-today" style={{ left: LABEL_W + todayX }} />
             )}
+            {weekendBars.map((bar, i) => (
+              <div key={i} style={{
+                position: 'absolute',
+                left: LABEL_W + bar.left,
+                width: bar.width,
+                top: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.035)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }} />
+            ))}
             <div className="gantt-head">
               <div className="cell">Etapas e tópicos</div>
               <div className="timeline-cols" style={{ gridTemplateColumns: `repeat(${config.colCount}, ${totalW / config.colCount}px)` }}>
@@ -194,7 +277,13 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                     </div>
                     <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
                       {hasBar && (
-                        <div className="gantt-bar stage-bar" style={{ left: getX(stage.startDate), width: getW(stage.startDate, stage.endDate) }}>
+                        <div
+                          className="gantt-bar stage-bar"
+                          style={{ left: getX(stage.startDate), width: getW(stage.startDate, stage.endDate) }}
+                          onMouseEnter={(e) => handleTooltipEnter(e, { title: stage.name, startDate: stage.startDate, endDate: stage.endDate, type: 'Etapa' })}
+                          onMouseMove={handleTooltipMove}
+                          onMouseLeave={handleTooltipLeave}
+                        >
                           {stage.name}
                         </div>
                       )}
@@ -211,34 +300,57 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                             <span className="truncate small b">{topic.name}</span>
                           </div>
                           <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
-                            {topicHasBar && (
-                              <div className="gantt-bar accent-bar" style={{ left: getX(topic.startDate), width: getW(topic.startDate, topic.endDate), padding: 0 }}>
-                                <span style={{ padding: '0 8px' }}>{topic.name}</span>
-                              </div>
-                            )}
+                              {topicHasBar && (
+                               <div
+                                 className="gantt-bar accent-bar"
+                                 style={{ left: getX(topic.startDate), width: getW(topic.startDate, topic.endDate), padding: 0 }}
+                                 onMouseEnter={(e) => handleTooltipEnter(e, { title: topic.name, startDate: topic.startDate, endDate: topic.endDate, type: 'Tópico' })}
+                                 onMouseMove={handleTooltipMove}
+                                 onMouseLeave={handleTooltipLeave}
+                               >
+                                 <span style={{ padding: '0 8px' }}>{topic.name}</span>
+                               </div>
+                             )}
                           </div>
                         </div>
 
                         {(topic.subtopics ?? []).map((subtopic: any) => {
                           const subHasBar = subtopic.startDate && subtopic.endDate;
+                          const isHighPrio = subtopic.priority === 'high';
                           return (
-                            <div key={subtopic.id} className="gantt-row subtopic-row" style={{ opacity: 0.8 }}>
+                            <div key={subtopic.id} className={`gantt-row subtopic-row ${isHighPrio ? 'high-prio-row' : ''}`} style={{ opacity: isHighPrio ? 1 : 0.8 }}>
                               <div className="label-cell">
-                                <span style={{ color: 'var(--text-3)', marginRight: 4, marginLeft: 32 }}>-</span>
-                                <span className="truncate xs">{subtopic.name}</span>
+                                <span style={{ color: isHighPrio ? 'var(--danger)' : 'var(--text-3)', marginRight: 4, marginLeft: 32 }}>{isHighPrio ? '!' : '-'}</span>
+                                <span className={`truncate xs ${isHighPrio ? 'b' : ''}`}>{subtopic.name}</span>
                               </div>
                               <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
                                 {subHasBar && (
-                                  <div className="gantt-bar success-bar" style={{ left: getX(subtopic.startDate), width: getW(subtopic.startDate, subtopic.endDate), padding: 0 }}>
-                                    <Link 
-                                      to={`/projects/${project.id}/stages/${stage.id}/topics/${topic.id}/subtopics/${subtopic.id}`}
-                                      className="gantt-bar-link"
-                                      style={{ padding: '0 8px', display: 'flex', alignItems: 'center', fontSize: 10 }}
-                                    >
-                                      {subtopic.name}
-                                    </Link>
-                                  </div>
-                                )}
+                                   <div
+                                     className={`gantt-bar success-bar ${isHighPrio ? 'high-prio' : ''}`}
+                                     style={{ left: getX(subtopic.startDate), width: getW(subtopic.startDate, subtopic.endDate), padding: 0 }}
+                                     onMouseEnter={(e) => handleTooltipEnter(e, {
+                                       title: subtopic.name,
+                                       description: subtopic.description,
+                                       startDate: subtopic.startDate,
+                                       endDate: subtopic.endDate,
+                                       type: subtopic.taskType === 'milestone' ? 'Marco' : subtopic.taskType === 'deliverable' ? 'Entrega' : 'Tarefa',
+                                       priority: subtopic.priority === 'high' ? 'Alta' : subtopic.priority === 'med' ? 'Média' : 'Baixa',
+                                       status: subtopic.status === 'done' ? 'Concluído' : subtopic.status === 'inprog' ? 'Em andamento' : subtopic.status === 'review' ? 'Revisão' : subtopic.status === 'blocked' ? 'Bloqueado' : 'A fazer',
+                                       progress: subtopic.progress,
+                                       responsible: subtopic.teams?.map((t: any) => t.team?.name).filter(Boolean).join(', '),
+                                     })}
+                                     onMouseMove={handleTooltipMove}
+                                     onMouseLeave={handleTooltipLeave}
+                                   >
+                                     <Link 
+                                       to={`/projects/${project.id}/stages/${stage.id}/topics/${topic.id}/subtopics/${subtopic.id}`}
+                                       className="gantt-bar-link"
+                                       style={{ padding: '0 8px', display: 'flex', alignItems: 'center', fontSize: 10 }}
+                                     >
+                                       {subtopic.name}
+                                     </Link>
+                                   </div>
+                                 )}
                               </div>
                             </div>
                           );
@@ -305,6 +417,38 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
           </div>
         </div>
       </div>
+
+      {tooltip && (
+        <div style={{
+          position: 'fixed',
+          left: tooltip.x + 12,
+          top: tooltip.y + 12,
+          zIndex: 99999,
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '8px 12px',
+          fontSize: 12,
+          lineHeight: 1.5,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+          maxWidth: 320,
+          pointerEvents: 'none',
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>{tooltip.title}</div>
+          {tooltip.description && (
+            <div style={{ color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.4, fontSize: 11 }}>{tooltip.description}</div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 11, color: 'var(--text-2)' }}>
+            {tooltip.type && <span><span style={{ color: 'var(--text-3)' }}>Tipo:</span> {tooltip.type}</span>}
+            {tooltip.status && <span><span style={{ color: 'var(--text-3)' }}>Status:</span> {tooltip.status}</span>}
+            {tooltip.priority && <span><span style={{ color: 'var(--text-3)' }}>Prioridade:</span> {tooltip.priority}</span>}
+            {tooltip.progress !== undefined && <span><span style={{ color: 'var(--text-3)' }}>Progresso:</span> {tooltip.progress}%</span>}
+            {tooltip.startDate && <span><span style={{ color: 'var(--text-3)' }}>Início:</span> {formatDate(tooltip.startDate)}</span>}
+            {tooltip.endDate && <span><span style={{ color: 'var(--text-3)' }}>Fim:</span> {formatDate(tooltip.endDate)}</span>}
+            {tooltip.responsible && <span><span style={{ color: 'var(--text-3)' }}>Responsável:</span> {tooltip.responsible}</span>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -9,7 +9,20 @@
  *   - isConcurrent=false → sequencial, começa após o bloco concurrent terminar e após o anterior sequencial
  */
 
-import { addDays } from 'date-fns';
+import { addDays, getDay } from 'date-fns';
+
+function isWorkingDay(date: Date): boolean {
+  const day = getDay(date);
+  return day !== 0 && day !== 6; // 0=domingo, 6=sábado
+}
+
+function toNextWorkingDay(date: Date): Date {
+  let result = new Date(date);
+  while (!isWorkingDay(result)) {
+    result = addDays(result, 1);
+  }
+  return result;
+}
 
 interface SubtopicInput {
   id: string;
@@ -58,8 +71,26 @@ function addWorkDays(start: Date, days: number): Date {
   if (days <= 0) return start;
   const whole = Math.floor(days);
   const frac = days - whole;
-  const result = addDays(start, whole);
-  return frac > 0 ? addDays(result, 1) : result;
+
+  // Se começar em fim de semana, avança para segunda
+  let result = toNextWorkingDay(start);
+
+  // Adiciona dias úteis inteiros, pulando fins de semana
+  let remaining = whole;
+  while (remaining > 0) {
+    result = addDays(result, 1);
+    if (isWorkingDay(result)) {
+      remaining--;
+    }
+  }
+
+  // Fração de dia útil → adiciona 1 dia útil extra (simplificação)
+  if (frac > 0) {
+    result = addDays(result, 1);
+    result = toNextWorkingDay(result);
+  }
+
+  return result;
 }
 
 function scheduleTopic(topic: TopicInput, topicStart: Date, dailyHours: number): ScheduledTopic {

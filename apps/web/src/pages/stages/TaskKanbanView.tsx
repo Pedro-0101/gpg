@@ -67,6 +67,7 @@ function MiniGantt({ stage, accentColor }: { stage: any; accentColor: string }) 
           const tStart = topic.startDate ? new Date(topic.startDate) : null;
           const tEnd   = topic.endDate   ? new Date(topic.endDate)   : null;
           const subs: any[] = topic.subtopics ?? [];
+          const hasHighPrio = subs.some((s) => s.priority === 'high');
           const doneCount    = subs.filter((s) => s.status === 'done').length;
           const inprogCount  = subs.filter((s) => s.status === 'inprog').length;
           const blockedCount = subs.filter((s) => s.status === 'blocked').length;
@@ -85,8 +86,15 @@ function MiniGantt({ stage, accentColor }: { stage: any; accentColor: string }) 
           return (
             <div
               key={topic.id}
-              style={{ position: 'relative', height: 18, background: '#00000010', borderRadius: 4, overflow: 'hidden' }}
-              title={`${topic.name} · ${doneCount}/${subs.length} concluídas`}
+              style={{ 
+                position: 'relative', 
+                height: 18, 
+                background: '#00000010', 
+                borderRadius: 4, 
+                overflow: 'hidden',
+                ...(hasHighPrio ? { border: '1.5px solid #EF4444', boxShadow: '0 0 4px #EF444422' } : {})
+              }}
+              title={`${topic.name} · ${doneCount}/${subs.length} concluídas ${hasHighPrio ? '(Contém alta prioridade)' : ''}`}
             >
               {hasDates ? (
                 <div style={{
