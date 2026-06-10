@@ -21,12 +21,12 @@ const COLS: { id: string; label: string; color: string; bg: string }[] = [
   { id: 'todo',    label: 'A fazer',      color: '#6B7280', bg: '#6B728014' },
   { id: 'inprog',  label: 'Em progresso', color: '#4F46E5', bg: '#4F46E514' },
   { id: 'review',  label: 'Em revisão',   color: '#F59E0B', bg: '#F59E0B14' },
-  { id: 'done',    label: 'Concluída',    color: '#10B981', bg: '#10B98114' },
+  { id: 'done',    label: 'Concluída',    color: '#818CF8', bg: '#818CF814' },
   { id: 'blocked', label: 'Bloqueada',    color: '#EF4444', bg: '#EF444414' },
 ];
 
 const STATUS_COLOR: Record<string, string> = {
-  todo: '#6B7280', inprog: '#4F46E5', review: '#F59E0B', done: '#10B981', blocked: '#EF4444',
+  todo: '#6B7280', inprog: '#4F46E5', review: '#F59E0B', done: '#818CF8', blocked: '#EF4444',
 };
 
 // ── Mini-Gantt ────────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ function MiniGantt({ stage, accentColor }: { stage: any; accentColor: string }) 
           const barColor =
             blockedCount > 0 ? '#EF4444'
             : inprogCount > 0 ? '#4F46E5'
-            : subs.length > 0 && doneCount === subs.length ? '#10B981'
+            : subs.length > 0 && doneCount === subs.length ? '#818CF8'
             : '#6B7280';
 
           const donePct  = subs.length > 0 ? (doneCount / subs.length) * 100 : 0;
@@ -89,10 +89,9 @@ function MiniGantt({ stage, accentColor }: { stage: any; accentColor: string }) 
               style={{ 
                 position: 'relative', 
                 height: 18, 
-                background: '#00000010', 
-                borderRadius: 4, 
+                background: hasHighPrio ? '#EF44442a' : '#00000010',
+                borderRadius: 4,
                 overflow: 'hidden',
-                ...(hasHighPrio ? { border: '1.5px solid #EF4444', boxShadow: '0 0 4px #EF444422' } : {})
               }}
               title={`${topic.name} · ${doneCount}/${subs.length} concluídas ${hasHighPrio ? '(Contém alta prioridade)' : ''}`}
             >
@@ -223,7 +222,7 @@ export const TaskKanbanView: React.FC<TaskKanbanViewProps> = ({ project, stages:
           const hasBlocked = allTasks.some((t: any) => t.status === 'blocked');
           const hasInprog  = allTasks.some((t: any) => t.status === 'inprog');
           const statusColor =
-            hasBlocked ? '#EF4444' : hasInprog ? '#4F46E5' : donePct === 100 ? '#10B981' : '#6B7280';
+            hasBlocked ? '#EF4444' : hasInprog ? '#4F46E5' : donePct === 100 ? '#818CF8' : '#6B7280';
 
           return (
             <div
