@@ -65,6 +65,7 @@ export function ProjectsPage() {
         startDate: project.startDate.split('T')[0] as unknown as Date,
         dailyHours: project.dailyHours,
         status: project.status as CreateProjectDto['status'],
+        totalBudget: project.totalBudget != null ? Number(project.totalBudget) : null,
       });
     } else {
       setEditing(null);
@@ -203,14 +204,29 @@ export function ProjectsPage() {
                     <input type="number" min={1} max={24} style={inputStyle} {...form.register('dailyHours', { valueAsNumber: true })} />
                   </div>
                 </div>
-                <div>
-                  <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Status</label>
-                  <select style={inputStyle} {...form.register('status')}>
-                    <option value="active">Ativo</option>
-                    <option value="paused">Pausado</option>
-                    <option value="completed">Concluído</option>
-                    <option value="cancelled">Cancelado</option>
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Status</label>
+                    <select style={inputStyle} {...form.register('status')}>
+                      <option value="active">Ativo</option>
+                      <option value="paused">Pausado</option>
+                      <option value="completed">Concluído</option>
+                      <option value="cancelled">Cancelado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="xs faint" style={{ display: 'block', marginBottom: 4 }}>Orçamento previsto (R$)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      style={inputStyle}
+                      placeholder="Opcional"
+                      {...form.register('totalBudget', {
+                        setValueAs: (v) => (v === '' || v == null ? null : Number(v)),
+                      })}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="row" style={{ gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>

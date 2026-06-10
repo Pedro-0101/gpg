@@ -189,7 +189,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
   const onTime  = allSubtopics.filter((s: any) => s.status === 'done' && (!s.deadline || new Date(s.endDate ?? s.updatedAt) <= new Date(s.deadline))).length;
   const lateOk  = Math.max(0, doneTasks - onTime);
 
-  const plannedCost = costsSummary?.plannedCost ?? 0;
+  const taskPlannedCost = costsSummary?.plannedCost ?? 0;
+  const userBudget  = Number(project.totalBudget ?? 0);
+  const plannedCost = userBudget > 0 ? userBudget : taskPlannedCost;
   const doneCost    = costsSummary?.doneCost ?? 0;
   const totalSpent  = costsSummary?.totalSpent ?? 0;
   const burnRate    = plannedCost > 0 ? Math.round((doneCost / plannedCost) * 100) : 0;
@@ -483,7 +485,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ project }) => {
           <ExecSection n="02" title="Como está o orçamento">
             <p style={{ color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 14 }}>
               {plannedCost > 0
-                ? <>O projeto tem <strong>{formatCurrency(plannedCost)}</strong> de orçamento previsto pelas tarefas. Foram realizados <strong>{formatCurrency(doneCost)}</strong> ({burnRate}% do total), com saldo de <strong style={{ color: balance < 0 ? 'var(--danger)' : 'inherit' }}>{formatCurrency(balance)}</strong>.{totalSpent > 0 ? ` Lançamentos manuais totalizam ${formatCurrency(totalSpent)}.` : ''}</>
+                ? <>O projeto tem <strong>{formatCurrency(plannedCost)}</strong> de orçamento previsto{userBudget > 0 ? '' : ' pelas tarefas'}. Foram realizados <strong>{formatCurrency(doneCost)}</strong> ({burnRate}% do total), com saldo de <strong style={{ color: balance < 0 ? 'var(--danger)' : 'inherit' }}>{formatCurrency(balance)}</strong>.{totalSpent > 0 ? ` Lançamentos manuais totalizam ${formatCurrency(totalSpent)}.` : ''}</>
                 : <>Orçamento ainda não calculado pelas tarefas. {totalSpent > 0 ? `Lançamentos manuais registrados: ${formatCurrency(totalSpent)}.` : 'Nenhum lançamento registrado.'}</>
               }
             </p>

@@ -101,7 +101,7 @@ export async function getSummaries() {
     const doneTasks = subs.filter((s) => s.status === 'done').length;
     const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
-    let plannedCost = 0;
+    let taskPlannedCost = 0;
     let doneCost = 0;
     for (const sub of subs) {
       const costPerHour = (sub as any).teams.reduce((sum: number, st: any) => {
@@ -110,9 +110,13 @@ export async function getSummaries() {
         }, 0);
       }, 0);
       const cost = sub.durationHours * costPerHour;
-      plannedCost += cost;
+      taskPlannedCost += cost;
       if (sub.status === 'done') doneCost += cost;
     }
+
+    // orçamento definido pelo usuário tem prioridade; cálculo por tarefas é o fallback
+    const userBudget = Number(p.totalBudget ?? 0);
+    const plannedCost = userBudget > 0 ? userBudget : taskPlannedCost;
 
     const lastTaskDate = subs.reduce((max: Date | null, sub) => {
       const d = sub.endDate;

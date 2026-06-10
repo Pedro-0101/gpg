@@ -242,7 +242,9 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
   const completedTasks = allSubtopics.filter((s: any) => s.status === 'done').length;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  const plannedCost = costsSummary?.plannedCost ?? 0;
+  const taskPlannedCost = costsSummary?.plannedCost ?? 0;
+  const userBudget = Number(project.totalBudget ?? 0);
+  const plannedCost = userBudget > 0 ? userBudget : taskPlannedCost;
   const doneCost = costsSummary?.doneCost ?? 0;
   const miscSpent = costsSummary?.totalSpent ?? 0;
   const miscCount = costsSummary?.count ?? 0;
@@ -365,12 +367,18 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
       </div>
 
       {/* KPI row — financeiro */}
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
         <KPI
           label="Orçamento previsto"
           value={formatCurrency(plannedCost)}
-          sub="pessoal calculado pelas tarefas"
+          sub={userBudget > 0 ? 'valor fixo definido para o projeto' : 'sem orçamento definido — usando custo de pessoal'}
           accentColor="var(--accent)"
+        />
+        <KPI
+          label="Custo previsto de pessoal"
+          value={formatCurrency(taskPlannedCost)}
+          sub="calculado pelas tarefas (horas × custo/h)"
+          accentColor="var(--info)"
         />
         <KPI
           label="Custo realizado"
@@ -495,7 +503,7 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
         <div className="card-head">
           <div className="card-title">Orçamento previsto × realizado</div>
           <div className="row" style={{ gap: 16 }}>
-            <span className="xs faint">Previsto: <span className="b">{formatCurrency(plannedCost)}</span></span>
+            <span className="xs faint">Previsto: <span className="b">{formatCurrency(taskPlannedCost)}</span></span>
             <span className="xs" style={{ color: 'var(--accent)' }}>Realizado: <span className="b">{formatCurrency(doneCost)}</span></span>
           </div>
         </div>
@@ -582,7 +590,7 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
               )}
               <tr style={{ background: 'var(--surface-2)' }}>
                 <td className="small b">Total do projeto</td>
-                <td className="right mono xs b">{formatCurrency(plannedCost)}</td>
+                <td className="right mono xs b">{formatCurrency(taskPlannedCost)}</td>
                 <td className="right mono xs b">{formatCurrency(doneCost)}</td>
                 <td className="right mono xs b">{formatCurrency(miscSpent)}</td>
                 <td className="right mono small b">{formatCurrency(grandTotal)}</td>

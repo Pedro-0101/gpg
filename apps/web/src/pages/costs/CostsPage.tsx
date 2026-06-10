@@ -104,7 +104,9 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
     },
   });
 
-  const plannedCost = summary?.plannedCost ?? 0;
+  const taskPlanned = summary?.plannedCost ?? 0;
+  const userBudget  = Number(project.totalBudget ?? 0);
+  const plannedCost = userBudget > 0 ? userBudget : taskPlanned;
   const doneCost    = summary?.doneCost    ?? 0;
   const balance     = plannedCost - doneCost;
   const burnRate    = plannedCost > 0 ? (doneCost / plannedCost) * 100 : 0;
@@ -184,7 +186,7 @@ export const CostsPage: React.FC<CostsPageProps> = ({ project }) => {
       {/* ── KPI grid — cada card com acento colorido ── */}
       <div className="kpi-grid">
         <KPI label="Orçamento previsto" value={fmtK(plannedCost)}
-          sub="total planejado pelas tasks" accentColor="var(--accent)" />
+          sub={userBudget > 0 ? 'definido para o projeto' : 'total planejado pelas tasks'} accentColor="var(--accent)" />
         <KPI label="Gastos realizados" value={fmtK(doneCost)}
           delta={plannedCost > 0 ? { dir: burnRate > 80 ? 'down' : 'flat', text: `${Math.round(burnRate)}%` } : undefined}
           sub="tasks com status concluído" accentColor="var(--success)" />
