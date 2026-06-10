@@ -60,7 +60,7 @@
 
 ---
 
-## 3. Equipes e Profissionais (10 squads · 18 profissionais)
+## 3. Equipes e Profissionais (12 squads · 23 profissionais)
 
 ### Squad 1 — Plataforma / SRE
 | Campo | Detalhe |
@@ -132,6 +132,20 @@
 | **Custo/h** | R$ 100/h |
 | **Responsabilidades** | Pesquisa com usuários e mapeamento de jornadas; design system global reutilizável por todas as telas; prototipagem e testes de usabilidade; adaptação visual para diferentes culturas e mercados (design localizado); handoff de especificações para as squads de desenvolvimento |
 
+### Squad 11 — Marketing & Lançamento
+| Campo | Detalhe |
+|---|---|
+| **Profissionais** | Digital Marketing Manager (R$130/h) · Growth Hacker (R$110/h) · Copywriter/Localização (R$80/h) |
+| **Custo/h** | R$ 320/h |
+| **Responsabilidades** | Posicionamento de marca e estratégia de go-to-market por região; planejamento e execução de campanhas de aquisição paga (Google, Meta, ASO); benchmarking competitivo e pesquisa de mercado por país; conteúdo localizado em múltiplos idiomas; monitoramento de métricas de aquisição (CAC, DAU/MAU, funil de conversão) pós-lançamento |
+
+### Squad 12 — Suporte & Customer Success
+| Campo | Detalhe |
+|---|---|
+| **Profissionais** | Head de Suporte (R$120/h) · Customer Success Lead (R$100/h) |
+| **Custo/h** | R$ 220/h |
+| **Responsabilidades** | Estruturação de canais de atendimento (chat, e-mail, telefone), SLAs e base de conhecimento; criação de playbooks e FAQs multi-idioma; treinamento da equipe de suporte para produto financeiro; cobertura 24/7 nos primeiros 30 dias pós-lançamento global; coleta e análise de NPS, reviews nas lojas e entrevistas com early adopters para retroalimentar o produto |
+
 ### Resumo — custo/hora total das equipes
 
 | Squad | Custo/h |
@@ -140,13 +154,15 @@
 | Segurança | R$ 360/h |
 | PMO / Gestão | R$ 300/h |
 | Apps Cliente | R$ 320/h |
+| Marketing & Lançamento | R$ 320/h |
 | Dados & Insights | R$ 270/h |
 | FX & Tax Engine | R$ 250/h |
+| Suporte & Customer Success | R$ 220/h |
 | Compliance & Localização | R$ 170/h |
 | Open Finance | R$ 130/h |
 | Core Financeiro | R$ 110/h |
 | Design / UX | R$ 100/h |
-| **Total (todas as squads simultâneas)** | **R$ 2.480/h** |
+| **Total (todas as squads simultâneas)** | **R$ 3.020/h** |
 
 ---
 
@@ -182,6 +198,9 @@ O projeto começa com três tarefas que acontecem quase em paralelo, porque toda
 
 > **Definição da arquitetura alvo** *(120h / 141h)* · **Caminho crítico**
 > Com todos os insumos em mãos, o Tech Lead desenhou a arquitetura. A decisão mais importante aqui foi adotar **event-driven com Kafka** em vez de uma API síncrona tradicional. O raciocínio: se um banco cair, o app não pode cair junto. Com mensageria assíncrona, a falha de um componente não derruba os outros. Esta tarefa é **crítica** porque todas as squads dependem dela para saber como seus serviços se comunicam entre si. Tomou mais tempo (+17%) por causa da complexidade do desenho multi-região.
+
+> **Pesquisa de mercado e benchmarking competitivo** *(80h / 92h)* ·  concomitante · prioridade baixa
+> Enquanto as decisões técnicas e legais tomavam forma, o squad de Marketing mapeou o cenário competitivo nos 10 mercados-alvo — análise de TAM/SAM/SOM, benchmarking com Revolut, Wise, Nubank e concorrentes locais, e primeiros sinais de posicionamento do produto. Atividade concomitante ao discovery técnico; não bloqueia nenhuma outra entrega, mas alimenta as decisões de produto do F1 em diante.
 
 ---
 
@@ -242,6 +261,9 @@ Não existe app financeiro sem saber quem é o usuário. Esta foi a primeira ent
 > **Autenticação + MFA** *(120h / 117h)* · **Caminho crítico**
 > Com a identidade verificada, o time construiu o sistema de login com autenticação multifator obrigatória. É **crítica** porque é o portão de entrada do produto — tudo que vem depois pressupõe que o usuário está autenticado. Foi a única tarefa desta fase que terminou *abaixo* do planejado, aproveitando o modelo de identidade construído no F0.
 
+> **Estratégia de marca e posicionamento Brasil** *(96h / 108h)* · concomitante · prioridade média
+> Em paralelo ao desenvolvimento do onboarding técnico, o squad de Marketing definiu a identidade visual, tom de voz, canais de aquisição e o plano de go-to-market para o lançamento no Brasil. A estratégia considerou o perfil do usuário brasileiro de fintech — jovem, bancarizado parcialmente, familiarizado com apps como Nubank — e posicionou o Guru Cash como uma camada de inteligência financeira sobre os dados já existentes nas contas do usuário.
+
 ---
 
 **Tópico 2 — Integração Open Finance (BACEN)**
@@ -300,6 +322,9 @@ Com os dados bancários sincronizados e o motor de câmbio pronto, o time finalm
 > **UAT MVP Brasil** *(72h / 62h)* · **Caminho crítico**
 > O teste de aceitação com usuários reais — a validação final antes do lançamento. É **crítica** porque nenhum lançamento acontece sem aprovação do PMO e do Product Owner. Foi a única tarefa do F1 que terminou abaixo do planejado, graças à qualidade dos testes automatizados que anteciparam a maioria dos bugs.
 
+> **Estruturação do canal de suporte ao cliente** *(64h / 72h)* · concomitante · prioridade baixa
+> Enquanto o UAT rodava, o squad de Suporte estruturou os canais de atendimento que estariam ativos no dia do lançamento: chat in-app, e-mail de suporte, árvore de categorização de tickets e base de conhecimento inicial. A definição dos SLAs (tempo de primeira resposta ≤ 2h, resolução ≤ 24h) foi alinhada com o PMO. Atividade concomitante; não bloqueia o UAT, mas precisa estar pronta antes do go-live.
+
 ---
 
 ### F2 — Hardening & Certificações
@@ -337,6 +362,9 @@ Esta foi uma decisão estratégica e controversa internamente — havia pressão
 > **Testes de carga e tuning** *(96h / 110h)* · **Caminho crítico**
 > O time simulou 50.000 usuários simultâneos. O sistema quebrou na primeira rodada — gargalo no banco de dados. Após otimizações (índices, caching, connection pooling), passou. É **crítica** porque o relatório de load test é exigido pelos reguladores americanos como prova de capacidade do sistema.
 
+> **Treinamento e playbooks de suporte** *(80h / 88h)* · concomitante · prioridade baixa
+> Enquanto o time técnico fazia hardening, o squad de Suporte usou o período para preparar a equipe de atendimento para o mercado internacional: playbooks de atendimento para os cenários mais comuns de produto financeiro (falha de sincronização bancária, erro de conversão, bloqueio de conta), FAQs em português e inglês, e protocolos de escalonamento para incidentes críticos. Uma preparação silenciosa que pagaria dividendos no F5.
+
 ---
 
 ### F3 — Expansão EUA
@@ -368,6 +396,9 @@ Com as certificações no bolso, o time olhou para o segundo mercado: os Estados
 
 > **UAT EUA** *(72h / 71h)* · **Caminho crítico**
 > Teste de aceitação com usuários americanos reais — beta fechado com 200 usuários. O feedback principal foi sobre o fluxo de conexão de contas, que foi simplificado antes do go-live.
+
+> **Campanha de aquisição — mercado americano** *(120h / 134h)* · concomitante · prioridade média
+> Em paralelo ao UAT, o squad de Marketing executou as campanhas de pré-lançamento nos EUA: anúncios pagos no Google e Meta segmentados para o público fintech americano, parcerias com influenciadores do nicho personal finance (YouTube, TikTok), e estratégia de ASO (App Store Optimization) para garantir presença orgânica nas lojas. O estouro de +12% veio do volume de variações de criativos testados para calibrar o CAC antes do go-live.
 
 ---
 
@@ -401,6 +432,9 @@ A Europa foi reservada para terceiro lugar por uma razão clara: é o ambiente r
 > **UAT Europa** *(72h / 67h)* · **Caminho crítico**
 > Beta fechado com usuários em 5 países europeus. O principal aprendizado: usuários alemães e franceses esperavam mais transparência sobre onde seus dados ficam armazenados — um banner informativo foi adicionado ao onboarding.
 
+> **Campanha de aquisição — mercado europeu** *(120h / 118h)* · concomitante · prioridade média
+> Paralelamente ao UAT europeu, o squad de Marketing adaptou as campanhas para o mosaico cultural europeu: versões de conteúdo em português (PT), inglês (UK), alemão, francês e espanhol; SEO localizado por país; e estratégia de performance marketing respeitando as restrições de cookies do GDPR (sem third-party tracking, foco em first-party data e campanhas contextuais). Foi a única atividade de marketing que terminou levemente abaixo do planejado — o sistema de i18n construído no F3 acelerou a produção de criativos localizados.
+
 ---
 
 ### F5 — Lançamento Global
@@ -423,6 +457,9 @@ Com Brasil, EUA e Europa operando, chegou a hora do grande lançamento. Os outro
 > **Go-live global / rollout 10 países** *(140h / 136h)* · **Caminho crítico**
 > O lançamento foi feito em ondas ao longo de uma semana — primeiro os países com menor risco regulatório, depois os mais complexos. O time de operações monitorou dashboards em tempo real durante todo o processo. É **crítica** porque é o entregável final — o momento em que o produto chega às mãos dos usuários nos 10 países.
 
+> **Operação de CS no go-live global** *(120h / 128h)* · concomitante · prioridade média
+> Durante todo o período de rollout, o squad de Suporte operou em regime 24/7 — coberta com um Head de Suporte e um Customer Success Lead em turnos intercalados com o suporte terceirizado contratado para os idiomas locais. Cada onda de lançamento gerava um pico previsível de tickets (falhas de conexão bancária, dúvidas de KYC, problemas de câmbio). Os playbooks construídos no F2 provaram seu valor: o tempo médio de resolução ficou 40% abaixo da meta, e nenhum incidente crítico passou das 2h sem resolução.
+
 ---
 
 **Tópico 2 — Pós-lançamento**
@@ -432,6 +469,12 @@ Com Brasil, EUA e Europa operando, chegou a hora do grande lançamento. Os outro
 
 > **Monitoramento de adoção e insights** *(140h / 0h)* · **EM ABERTO**
 > A única tarefa ainda em andamento — o time de Dados & Insights está construindo os dashboards de métricas de produto (DAU, MAU, taxa de conversão freemium→premium, NPS por país). Isso alimentará as decisões do próximo roadmap.
+
+> **Monitoramento de métricas de aquisição global** *(80h / 60h — 75%)* · concomitante · prioridade média · **EM ANDAMENTO**
+> Em paralelo, o squad de Marketing acompanha as métricas de topo de funil nos 10 países: CAC por canal e região, DAU/MAU dos primeiros 30 dias, taxa de ativação (usuário que conecta pelo menos uma conta bancária), e ROI das campanhas. Os dados preliminares estão sendo usados para realocar budget de mídia dos países com CAC mais alto para os de melhor performance.
+
+> **Análise de NPS e feedback pós-lançamento** *(64h / 40h — 60%)* · concomitante · prioridade baixa · **EM ANDAMENTO**
+> O squad de Suporte está consolidando os primeiros indicadores de satisfação: NPS por país (escala 0–10 coletada no app após 7 dias de uso), reviews nas lojas (App Store e Google Play) e uma rodada de entrevistas qualitativas com early adopters selecionados. Os principais temas emergentes — velocidade de sincronização bancária e clareza das categorias automáticas — já estão sendo encaminhados para o backlog de produto.
 
 ---
 
