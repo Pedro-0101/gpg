@@ -178,8 +178,8 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
           width: 100%;
         }
         .gantt-bar.high-prio {
-          border: 1.5px solid var(--danger) !important;
-          box-shadow: 0 0 4px var(--danger-soft);
+          background: #FCA5A5 !important;
+          color: #7F1D1D !important;
           z-index: 10;
         }
         .subtopic-row.high-prio-row {
@@ -223,7 +223,8 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
           <div className="row xs faint" style={{ gap: 12 }}>
             <span><span style={{ display: 'inline-block', width: 12, height: 8, background: 'var(--text)', borderRadius: 2, marginRight: 4 }} />Etapa</span>
             <span><span style={{ display: 'inline-block', width: 12, height: 8, background: 'var(--accent)', borderRadius: 2, marginRight: 4 }} />Tópico</span>
-            <span><span style={{ display: 'inline-block', width: 12, height: 8, background: 'var(--success)', borderRadius: 2, marginRight: 4 }} />Concluído</span>
+            <span><span style={{ display: 'inline-block', width: 12, height: 8, background: '#818CF8', borderRadius: 2, marginRight: 4 }} />Tarefa</span>
+            <span><span style={{ display: 'inline-block', width: 12, height: 8, background: '#FCA5A5', borderRadius: 2, marginRight: 4 }} />Caminho crítico</span>
           </div>
         </div>
         <div ref={scrollContainerRef} style={{ overflowX: 'auto' }}>
@@ -326,7 +327,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                               <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
                                 {subHasBar && (
                                    <div
-                                     className={`gantt-bar success-bar ${isHighPrio ? 'high-prio' : ''}`}
+                                     className={`gantt-bar accent-light-bar ${isHighPrio ? 'high-prio' : ''}`}
                                      style={{ left: getX(subtopic.startDate), width: getW(subtopic.startDate, subtopic.endDate), padding: 0 }}
                                      onMouseEnter={(e) => handleTooltipEnter(e, {
                                        title: subtopic.name,

@@ -665,6 +665,7 @@ body.theme-dark .btn.primary { color: #050505; }
 body.theme-dark .gantt-bar.stage-bar { color: #0A0A0A; }
 .gantt-bar.accent-bar   { background: var(--accent); }
 .gantt-bar.success-bar  { background: var(--success); }
+.gantt-bar.accent-light-bar { background: #818CF8; }
 .gantt-bar.purple-bar   { background: var(--purple); }
 .gantt-bar.warning-bar  { background: var(--warning); }
 .gantt-bar.muted-bar    { background: var(--text-3); color: var(--surface); }
