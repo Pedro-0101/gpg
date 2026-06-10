@@ -5,13 +5,35 @@ import { KPI } from '../../components/ui/KPI';
 import { Avatar, AvatarStack } from '../../components/ui/Avatar';
 import { StatusChip } from '../../components/ui/StatusChip';
 import { costsApi } from '../../api/costs';
-import { milestonesApi } from '../../api/risks-milestones';
+import { milestonesApi, risksApi } from '../../api/risks-milestones';
+import { decisionsApi } from '../../api/decisions';
 import { projectsApi } from '../../api/projects';
-import { calcSubtopicCost } from '../../lib/cost';
+import { calcSubtopicCost, calcStageCost, calcStageDoneCost } from '../../lib/cost';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { differenceInCalendarDays } from 'date-fns';
 
 interface ProjectOverviewPageProps { project: any; }
+
+const STAGE_PALETTE = ['#4F46E5', '#10B981', '#0EA5E9', '#F59E0B', '#EF4444', '#7C3AED', '#EC4899', '#06B6D4'];
+
+const CAT_COLORS: Record<string, string> = {
+  Pessoal:        'var(--accent)',
+  Ferramentas:    'var(--purple)',
+  Infraestrutura: 'var(--success)',
+  Freelancers:    'var(--warning)',
+  Outros:         'var(--text-3)',
+};
+
+const STATUS_META: Array<{ key: string; label: string; color: string }> = [
+  { key: 'done',    label: 'Concluídas',   color: 'var(--success)' },
+  { key: 'inprog',  label: 'Em progresso', color: 'var(--info)' },
+  { key: 'review',  label: 'Em revisão',   color: 'var(--warning)' },
+  { key: 'blocked', label: 'Bloqueadas',   color: 'var(--danger)' },
+  { key: 'todo',    label: 'A fazer',      color: 'var(--text-3)' },
+];
+
+const PROB_LABEL: Record<string, string> = { high: 'alta', med: 'média', low: 'baixa' };
+const IMPACT_LABEL: Record<string, string> = { high: 'alto', med: 'médio', low: 'baixo' };
 
 function BudgetChart({ project }: { project: any }) {
   const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
@@ -193,6 +215,18 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
     queryKey: ['milestones', project.id],
     queryFn: () => milestonesApi.list(project.id),
   });
+  const { data: costEntries = [] } = useQuery({
+    queryKey: ['costs', project.id],
+    queryFn: () => costsApi.list(project.id),
+  });
+  const { data: risks = [] } = useQuery({
+    queryKey: ['risks', project.id],
+    queryFn: () => risksApi.list(project.id),
+  });
+  const { data: decisions = [] } = useQuery({
+    queryKey: ['decisions', project.id],
+    queryFn: () => decisionsApi.list(project.id),
+  });
 
   const recalcMut = useMutation({
     mutationFn: () => projectsApi.recalculate(project.id),
@@ -210,7 +244,62 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
 
   const plannedCost = costsSummary?.plannedCost ?? 0;
   const doneCost = costsSummary?.doneCost ?? 0;
-  const burnRate = plannedCost > 0 ? Math.round((doneCost / plannedCost) * 100) : 0;
+  const miscSpent = costsSummary?.totalSpent ?? 0;
+  const miscCount = costsSummary?.count ?? 0;
+  const totalRealized = doneCost + miscSpent;
+  const balance = plannedCost - totalRealized;
+  const burnRate = plannedCost > 0 ? Math.round((totalRealized / plannedCost) * 100) : 0;
+
+  const costByCategory = Object.entries(costsSummary?.byCategory ?? {})
+    .map(([cat, val]) => [cat, Number(val)] as [string, number])
+    .sort((a, b) => b[1] - a[1]);
+
+  const entriesByStage: Record<string, number> = {};
+  let unassignedMisc = 0;
+  for (const e of costEntries as any[]) {
+    if (e.stageId) entriesByStage[e.stageId] = (entriesByStage[e.stageId] ?? 0) + Number(e.amount);
+    else unassignedMisc += Number(e.amount);
+  }
+
+  const stageCostRows = (project.stages ?? []).map((stage: any, si: number) => {
+    const personnel = calcStageCost(stage);
+    const personnelDone = calcStageDoneCost(stage);
+    const misc = entriesByStage[stage.id] ?? 0;
+    return {
+      id: stage.id,
+      name: stage.name,
+      tone: STAGE_PALETTE[si % STAGE_PALETTE.length],
+      personnel,
+      personnelDone,
+      misc,
+      total: personnel + misc,
+    };
+  });
+  const grandTotal = stageCostRows.reduce((n: number, r: any) => n + r.total, 0) + unassignedMisc;
+
+  const overdueTasks = allSubtopics.filter(
+    (s: any) => s.status !== 'done' && s.endDate && new Date(s.endDate) < new Date(),
+  ).length;
+  const statusCounts = allSubtopics.reduce((acc: Record<string, number>, s: any) => {
+    acc[s.status] = (acc[s.status] ?? 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const sevRank: Record<string, number> = { high: 3, med: 2, low: 1 };
+  const activeRisks = ((risks as any[]) ?? [])
+    .filter((r) => r.status === 'active')
+    .sort((a, b) =>
+      (sevRank[b.probability] ?? 0) * (sevRank[b.impact] ?? 0) -
+      (sevRank[a.probability] ?? 0) * (sevRank[a.impact] ?? 0),
+    );
+  const criticalRisks = activeRisks.filter((r) => r.probability === 'high' && r.impact === 'high').length;
+  const pendingDecisions = ((decisions as any[]) ?? [])
+    .filter((d) => d.status === 'pending')
+    .sort((a, b) => {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
 
   const lastTaskDate = allSubtopics.reduce((max: Date | null, sub: any) => {
     const d = sub.endDate ? new Date(sub.endDate) : null;
@@ -245,8 +334,6 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
     return 'todo';
   }
 
-  const STAGE_PALETTE = ['#4F46E5', '#10B981', '#0EA5E9', '#F59E0B', '#EF4444', '#7C3AED', '#EC4899', '#06B6D4'];
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Project hero */}
@@ -277,21 +364,57 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
         </div>
       </div>
 
-      {/* KPI row */}
+      {/* KPI row — financeiro */}
       <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <KPI
           label="Orçamento previsto"
           value={formatCurrency(plannedCost)}
-          sub={plannedCost > 0 ? `${burnRate}% já realizado` : 'calculado pelas tarefas'}
+          sub="pessoal calculado pelas tarefas"
+          accentColor="var(--accent)"
         />
+        <KPI
+          label="Custo realizado"
+          value={formatCurrency(totalRealized)}
+          delta={plannedCost > 0 ? { dir: burnRate > 100 ? 'down' : 'flat', text: `${burnRate}%` } : undefined}
+          sub="tarefas concluídas + lançamentos"
+          accentColor="var(--success)"
+        />
+        <KPI
+          label="Lançamentos diversos"
+          value={formatCurrency(miscSpent)}
+          sub={`${miscCount} lançamento${miscCount === 1 ? '' : 's'} no projeto`}
+          accentColor="var(--purple)"
+        />
+        <KPI
+          label="Saldo restante"
+          value={formatCurrency(Math.abs(balance))}
+          delta={plannedCost > 0 ? (balance < 0 ? { dir: 'down', text: 'déficit' } : { dir: 'up', text: 'folga' }) : undefined}
+          sub={balance >= 0 ? 'orçamento ainda disponível' : 'acima do previsto'}
+          accentColor={balance < 0 ? 'var(--danger)' : 'var(--warning)'}
+        />
+      </div>
+
+      {/* KPI row — execução */}
+      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <KPI
           label="Prazo final das tarefas"
           value={deadlineDate ? formatDate(deadlineDate) : '—'}
           sub={daysLeft !== null ? (daysLeft < 0 ? `${Math.abs(daysLeft)} dias atrás` : `em ${daysLeft} dias`) : ''}
           delta={daysLeft !== null && daysLeft < 0 ? { dir: 'down', text: 'atrasado' } : daysLeft !== null ? { dir: 'flat', text: 'no prazo' } : undefined}
         />
-        <KPI label="Tarefas abertas" value={totalTasks - completedTasks} sub={`${completedTasks} concluídas`} />
+        <KPI
+          label="Tarefas abertas"
+          value={totalTasks - completedTasks}
+          sub={`${completedTasks} concluídas de ${totalTasks}`}
+          delta={overdueTasks > 0 ? { dir: 'down', text: `${overdueTasks} atrasada${overdueTasks === 1 ? '' : 's'}` } : undefined}
+        />
         <KPI label="Equipes alocadas" value={teams.length} sub={`${professionalsCount} profissionais`} />
+        <KPI
+          label="Riscos ativos"
+          value={activeRisks.length}
+          sub={`${pendingDecisions.length} decis${pendingDecisions.length === 1 ? 'ão' : 'ões'} pendente${pendingDecisions.length === 1 ? '' : 's'}`}
+          delta={criticalRisks > 0 ? { dir: 'down', text: `${criticalRisks} crítico${criticalRisks === 1 ? '' : 's'}` } : undefined}
+        />
       </div>
 
       {/* Etapas — card grid */}
@@ -309,6 +432,7 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
                 const status = stageStatus(stage);
                 const taskCount = (stage.topics ?? []).reduce((n: number, t: any) => n + (t.subtopics?.length ?? 0), 0);
                 const topicCount = (stage.topics ?? []).length;
+                const stageTotal = calcStageCost(stage) + (entriesByStage[stage.id] ?? 0);
                 return (
                   <div key={stage.id} style={{
                     border: `1px solid color-mix(in srgb, ${tone} 25%, var(--border))`,
@@ -343,6 +467,11 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>
                       {topicCount} tópicos · {taskCount} tarefas
                     </div>
+                    {stageTotal > 0 && (
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginTop: 4 }}>
+                        {formatCurrency(stageTotal)} <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>custo total</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
                       <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 999, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: tone, borderRadius: 999 }} />
@@ -373,6 +502,95 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
         <div className="card-body" style={{ paddingTop: 4 }}>
           <BudgetChart project={project} />
         </div>
+      </div>
+
+      {/* Custo geral por etapa */}
+      <div className="card">
+        <div className="card-head">
+          <div className="card-title">
+            Custo geral por etapa <span className="card-sub">pessoal + lançamentos diversos</span>
+          </div>
+          <Link to="costs" className="btn sm ghost">Ver custos →</Link>
+        </div>
+        {stageCostRows.length === 0 ? (
+          <div className="card-body" style={{ textAlign: 'center', color: 'var(--text-3)', padding: 24 }}>
+            Nenhuma etapa cadastrada.
+          </div>
+        ) : (
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Etapa</th>
+                <th className="right">Pessoal previsto</th>
+                <th className="right">Pessoal realizado</th>
+                <th className="right">Lançamentos</th>
+                <th className="right">Custo total</th>
+                <th style={{ width: 150 }}>% do projeto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stageCostRows.map((row: any, i: number) => {
+                const sharePct = grandTotal > 0 ? (row.total / grandTotal) * 100 : 0;
+                return (
+                  <tr key={row.id}>
+                    <td>
+                      <div className="row" style={{ gap: 8 }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          padding: '1px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700,
+                          background: `color-mix(in srgb, ${row.tone} 12%, transparent)`, color: row.tone,
+                          border: `1px solid ${row.tone}33`, flexShrink: 0,
+                        }}>
+                          E{i + 1}
+                        </span>
+                        <span className="small b">{row.name}</span>
+                      </div>
+                    </td>
+                    <td className="right mono xs">{formatCurrency(row.personnel)}</td>
+                    <td className="right mono xs">{formatCurrency(row.personnelDone)}</td>
+                    <td className="right mono xs">{row.misc > 0 ? formatCurrency(row.misc) : '—'}</td>
+                    <td className="right mono small b">{formatCurrency(row.total)}</td>
+                    <td>
+                      <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                        <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 999, overflow: 'hidden' }}>
+                          <div style={{ width: `${sharePct}%`, height: '100%', background: row.tone, borderRadius: 999 }} />
+                        </div>
+                        <span className="xs faint" style={{ width: 32, textAlign: 'right' }}>{Math.round(sharePct)}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {unassignedMisc > 0 && (
+                <tr>
+                  <td><span className="xs faint" style={{ fontStyle: 'italic' }}>Lançamentos sem etapa</span></td>
+                  <td className="right mono xs">—</td>
+                  <td className="right mono xs">—</td>
+                  <td className="right mono xs">{formatCurrency(unassignedMisc)}</td>
+                  <td className="right mono small b">{formatCurrency(unassignedMisc)}</td>
+                  <td>
+                    <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                      <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{ width: `${grandTotal > 0 ? (unassignedMisc / grandTotal) * 100 : 0}%`, height: '100%', background: 'var(--text-3)', borderRadius: 999 }} />
+                      </div>
+                      <span className="xs faint" style={{ width: 32, textAlign: 'right' }}>
+                        {grandTotal > 0 ? Math.round((unassignedMisc / grandTotal) * 100) : 0}%
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              <tr style={{ background: 'var(--surface-2)' }}>
+                <td className="small b">Total do projeto</td>
+                <td className="right mono xs b">{formatCurrency(plannedCost)}</td>
+                <td className="right mono xs b">{formatCurrency(doneCost)}</td>
+                <td className="right mono xs b">{formatCurrency(miscSpent)}</td>
+                <td className="right mono small b">{formatCurrency(grandTotal)}</td>
+                <td />
+              </tr>
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="grid-3" style={{ gap: 12 }}>
@@ -484,6 +702,145 @@ export const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = ({ projec
                 </svg>
               )}
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid-3" style={{ gap: 12 }}>
+        {/* Status das tarefas */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Status das tarefas</div>
+            <span className="card-sub">{totalTasks} no total</span>
+          </div>
+          <div className="card-body">
+            {totalTasks === 0 ? (
+              <div style={{ padding: '8px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                Nenhuma tarefa cadastrada.
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', height: 10, borderRadius: 999, overflow: 'hidden', background: 'var(--surface-3)', marginBottom: 14 }}>
+                  {STATUS_META.map(({ key, color }) => {
+                    const n = statusCounts[key] ?? 0;
+                    if (n === 0) return null;
+                    return <div key={key} style={{ width: `${(n / totalTasks) * 100}%`, background: color }} />;
+                  })}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {STATUS_META.map(({ key, label, color }) => {
+                    const n = statusCounts[key] ?? 0;
+                    return (
+                      <div key={key} className="row" style={{ gap: 8 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
+                        <span className="fill small">{label}</span>
+                        <span className="mono xs b">{n}</span>
+                        <span className="xs faint" style={{ width: 36, textAlign: 'right' }}>
+                          {Math.round((n / totalTasks) * 100)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {overdueTasks > 0 && (
+                  <div className="row" style={{ gap: 8, marginTop: 12, padding: '8px 10px', background: 'var(--danger-soft)', borderRadius: 'var(--radius)' }}>
+                    <span style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 12 }}>!</span>
+                    <span className="xs" style={{ color: 'var(--danger)' }}>
+                      {overdueTasks} tarefa{overdueTasks === 1 ? '' : 's'} com prazo vencido
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Lançamentos por categoria */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Lançamentos por categoria</div>
+            <Link to="costs" className="btn sm ghost">Detalhar</Link>
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {costByCategory.length === 0 ? (
+              <div style={{ padding: '8px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                Nenhum lançamento registrado.
+                <br />
+                <Link to="costs" style={{ color: 'var(--accent)', fontSize: 12 }}>Lançar despesa.</Link>
+              </div>
+            ) : (
+              <>
+                {costByCategory.map(([cat, val]) => {
+                  const color = CAT_COLORS[cat] ?? 'var(--text-3)';
+                  const pct = miscSpent > 0 ? (val / miscSpent) * 100 : 0;
+                  return (
+                    <div key={cat}>
+                      <div className="row between" style={{ marginBottom: 4 }}>
+                        <span className="row small" style={{ gap: 6, alignItems: 'center' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
+                          {cat}
+                        </span>
+                        <span className="mono xs b">
+                          {formatCurrency(val)} <span className="faint">· {Math.round(pct)}%</span>
+                        </span>
+                      </div>
+                      <div style={{ height: 6, background: 'var(--surface-3)', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 999 }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="row between" style={{ marginTop: 4, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <span className="small b">Total lançado</span>
+                  <span className="mono small b">{formatCurrency(miscSpent)}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Riscos e decisões */}
+        <div className="card">
+          <div className="card-head">
+            <div className="card-title">Riscos e decisões</div>
+            {criticalRisks > 0 && (
+              <span className="chip high xs">{criticalRisks} crítico{criticalRisks === 1 ? '' : 's'}</span>
+            )}
+          </div>
+          <div className="card-body flush">
+            <div className="xs faint b" style={{ padding: '10px 16px 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Riscos ativos
+            </div>
+            {activeRisks.slice(0, 3).map((r: any) => (
+              <div key={r.id} className="list-item" style={{ alignItems: 'flex-start' }}>
+                <span style={{
+                  width: 8, height: 8, borderRadius: '50%', marginTop: 5, flexShrink: 0,
+                  background: r.impact === 'high' ? 'var(--danger)' : r.impact === 'med' ? 'var(--warning)' : 'var(--text-3)',
+                }} />
+                <div className="fill" style={{ minWidth: 0 }}>
+                  <div className="small b truncate">{r.title}</div>
+                  <div className="xs faint">
+                    prob. {PROB_LABEL[r.probability] ?? r.probability} · impacto {IMPACT_LABEL[r.impact] ?? r.impact}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {activeRisks.length === 0 && (
+              <div className="xs faint" style={{ padding: '6px 16px 10px' }}>Nenhum risco ativo.</div>
+            )}
+            <div className="xs faint b" style={{ padding: '10px 16px 4px', textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '1px solid var(--border)' }}>
+              Decisões pendentes
+            </div>
+            {pendingDecisions.slice(0, 3).map((d: any) => (
+              <div key={d.id} className="list-item">
+                <span style={{ width: 8, height: 8, background: 'var(--purple)', transform: 'rotate(45deg)', flexShrink: 0 }} />
+                <span className="fill small b truncate">{d.title}</span>
+                <span className="xs faint">{d.dueDate ? formatDate(d.dueDate) : 'sem prazo'}</span>
+              </div>
+            ))}
+            {pendingDecisions.length === 0 && (
+              <div className="xs faint" style={{ padding: '6px 16px 12px' }}>Nenhuma decisão pendente.</div>
+            )}
           </div>
         </div>
       </div>
