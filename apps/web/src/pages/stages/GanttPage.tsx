@@ -118,6 +118,40 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
     return Math.max(10, differenceInDays(new Date(end), new Date(start)) * config.dayW);
   };
 
+  const ROW_H = 36;
+  const HEAD_H = 36;
+
+  const criticalConnectors = React.useMemo(() => {
+    let rowIdx = 0;
+    const criticalRows: Array<{ rowIdx: number; data: any }> = [];
+
+    (stages as any[]).forEach((stage) => {
+      rowIdx++;
+      (stage.topics ?? []).forEach((topic: any) => {
+        rowIdx++;
+        (topic.subtopics ?? []).forEach((subtopic: any) => {
+          if (subtopic.priority === 'high' && subtopic.startDate && subtopic.endDate) {
+            criticalRows.push({ rowIdx, data: subtopic });
+          }
+          rowIdx++;
+        });
+      });
+    });
+
+    const dayW = config.dayW;
+    const connectors: Array<{ id: string; x1: number; y1: number; x2: number; y2: number }> = [];
+    for (let i = 0; i < criticalRows.length - 1; i++) {
+      const cur = criticalRows[i];
+      const next = criticalRows[i + 1];
+      const x1 = LABEL_W + Math.max(0, differenceInDays(new Date(cur.data.endDate), origin)) * dayW;
+      const y1 = HEAD_H + cur.rowIdx * ROW_H + ROW_H / 2;
+      const x2 = LABEL_W + Math.max(0, differenceInDays(new Date(next.data.startDate), origin)) * dayW;
+      const y2 = HEAD_H + next.rowIdx * ROW_H + ROW_H / 2;
+      connectors.push({ id: `${cur.data.id}-${next.data.id}`, x1, y1, x2, y2 });
+    }
+    return connectors;
+  }, [stages, config.dayW, origin]);
+
   React.useEffect(() => {
     if (scrollContainerRef.current) {
       const scrollTarget = todayX > 0 ? todayX - 200 : 0;
@@ -225,6 +259,13 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
             <span><span style={{ display: 'inline-block', width: 12, height: 8, background: 'var(--accent)', borderRadius: 2, marginRight: 4 }} />Tópico</span>
             <span><span style={{ display: 'inline-block', width: 12, height: 8, background: '#818CF8', borderRadius: 2, marginRight: 4 }} />Tarefa</span>
             <span><span style={{ display: 'inline-block', width: 12, height: 8, background: '#FCA5A5', borderRadius: 2, marginRight: 4 }} />Caminho crítico</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="28" height="10" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                <line x1="0" y1="5" x2="22" y2="5" stroke="#DC2626" strokeWidth="1.5" strokeDasharray="4 2" />
+                <polygon points="21,2 28,5 21,8" fill="#DC2626" />
+              </svg>
+              Sequência crítica
+            </span>
           </div>
         </div>
         <div ref={scrollContainerRef} style={{ overflowX: 'auto' }}>
@@ -252,6 +293,44 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                 zIndex: 0,
               }} />
             ))}
+
+            {criticalConnectors.length > 0 && (
+              <svg
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: LABEL_W + totalW,
+                  height: '100%',
+                  pointerEvents: 'none',
+                  zIndex: 11,
+                  overflow: 'visible',
+                }}
+              >
+                <defs>
+                  <marker id="cp-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#DC2626" />
+                  </marker>
+                </defs>
+                {criticalConnectors.map((c) => {
+                  const cx1 = c.x1 + Math.max(20, (c.x2 - c.x1) * 0.35);
+                  const cx2 = c.x2 - Math.max(20, (c.x2 - c.x1) * 0.35);
+                  return (
+                    <path
+                      key={c.id}
+                      d={`M ${c.x1},${c.y1} C ${cx1},${c.y1} ${cx2},${c.y2} ${c.x2},${c.y2}`}
+                      fill="none"
+                      stroke="#DC2626"
+                      strokeWidth={1.5}
+                      strokeDasharray="5 3"
+                      markerEnd="url(#cp-arrow)"
+                      opacity={0.65}
+                    />
+                  );
+                })}
+              </svg>
+            )}
             <div className="gantt-head">
               <div className="cell">Etapas e tópicos</div>
               <div className="timeline-cols" style={{ gridTemplateColumns: `repeat(${config.colCount}, ${totalW / config.colCount}px)` }}>
