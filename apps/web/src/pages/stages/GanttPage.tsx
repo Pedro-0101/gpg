@@ -19,7 +19,7 @@ const LABEL_W = 240;
 
 const viewConfigs = {
   day: {
-    dayW: 80, // Increased width to avoid overlap
+    dayW: 80,
     totalDays: 730,
     colCount: 730,
     getColumns: (origin: Date) => Array.from({ length: 730 }, (_, i) => addDays(origin, i)),
@@ -77,7 +77,6 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
 
   const config = viewConfigs[viewMode];
   
-  // Origin based on the first task or project start
   const origin = React.useMemo(() => {
     const dates: Date[] = [];
     if (project.startDate) dates.push(new Date(project.startDate));
@@ -91,7 +90,6 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
 
     if (dates.length === 0) return startOfMonth(new Date());
     
-    // Start at the beginning of the month of the earliest date
     return startOfMonth(min(dates));
   }, [project.startDate, stages]);
 
@@ -216,9 +214,6 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
           color: #7F1D1D !important;
           z-index: 10;
         }
-        .subtopic-row.high-prio-row {
-          /* background removed as requested */
-        }
         .gantt-row:hover {
           background-color: var(--surface-3) !important;
         }
@@ -261,8 +256,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
             <span><span style={{ display: 'inline-block', width: 12, height: 8, background: '#FCA5A5', borderRadius: 2, marginRight: 4 }} />Caminho crítico</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <svg width="28" height="10" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
-                <line x1="0" y1="5" x2="22" y2="5" stroke="#DC2626" strokeWidth="1.5" strokeDasharray="4 2" />
-                <polygon points="21,2 28,5 21,8" fill="#DC2626" />
+                <line x1="0" y1="5" x2="28" y2="5" stroke="#DC2626" strokeWidth="2" strokeDasharray="4 3" />
               </svg>
               Sequência crítica
             </span>
@@ -308,24 +302,22 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                   overflow: 'visible',
                 }}
               >
-                <defs>
-                  <marker id="cp-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#DC2626" />
-                  </marker>
-                </defs>
                 {criticalConnectors.map((c) => {
-                  const cx1 = c.x1 + Math.max(20, (c.x2 - c.x1) * 0.35);
-                  const cx2 = c.x2 - Math.max(20, (c.x2 - c.x1) * 0.35);
+                  const dx = c.x2 - c.x1;
+                  const dy = c.y2 - c.y1;
+                  const cx1 = c.x1 + Math.abs(dx) * 0.4;
+                  const cy1 = c.y1 + Math.abs(dy) * 0.4;
+                  const cx2 = c.x2 - Math.abs(dx) * 0.4;
                   return (
                     <path
                       key={c.id}
                       d={`M ${c.x1},${c.y1} C ${cx1},${c.y1} ${cx2},${c.y2} ${c.x2},${c.y2}`}
                       fill="none"
                       stroke="#DC2626"
-                      strokeWidth={1.5}
-                      strokeDasharray="5 3"
-                      markerEnd="url(#cp-arrow)"
-                      opacity={0.65}
+                      strokeWidth={2.5}
+                      strokeDasharray="6 4"
+                      opacity={0.5}
+                      strokeLinecap="round"
                     />
                   );
                 })}
@@ -398,7 +390,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                           const subHasBar = subtopic.startDate && subtopic.endDate;
                           const isHighPrio = subtopic.priority === 'high';
                           return (
-                            <div key={subtopic.id} className={`gantt-row subtopic-row ${isHighPrio ? 'high-prio-row' : ''}`} style={{ opacity: isHighPrio ? 1 : 0.8 }}>
+                            <div key={subtopic.id} className={`gantt-row subtopic-row`} style={{ opacity: isHighPrio ? 1 : 0.8 }}>
                               <div className="label-cell">
                                 <span style={{ color: isHighPrio ? 'var(--danger)' : 'var(--text-3)', marginRight: 4, marginLeft: 32 }}>{isHighPrio ? '!' : '-'}</span>
                                 <span className={`truncate xs ${isHighPrio ? 'b' : ''}`}>{subtopic.name}</span>
@@ -446,7 +438,6 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
       </div>
 
       <div className="grid-2" style={{ gap: 12 }}>
-        {/* Marcos críticos */}
         <div className="card">
           <div className="card-head">
             <div className="card-title">Marcos críticos</div>
@@ -472,7 +463,6 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
           </div>
         </div>
 
-        {/* Riscos & Dependências */}
         <div className="card">
           <div className="card-head">
             <div className="card-title">Riscos detectados</div>
