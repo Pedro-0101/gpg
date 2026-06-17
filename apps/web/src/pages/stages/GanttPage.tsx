@@ -5,7 +5,7 @@ import { stagesApi } from '../../api/stages';
 import { milestonesApi, risksApi } from '../../api/risks-milestones';
 import type { Risk } from '../../types';
 import { formatDate } from '../../lib/utils';
-import { differenceInDays, addMonths, addDays, format, min, startOfMonth } from 'date-fns';
+import { differenceInDays, addMonths, addDays, format, min, max, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PrioChip } from '../../components/ui/PrioChip';
 
@@ -93,8 +93,42 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
     return startOfMonth(min(dates));
   }, [project.startDate, stages]);
 
-  const columns = React.useMemo(() => config.getColumns(origin), [config, origin]);
-  const totalW = config.totalDays * config.dayW;
+  const maxEndDate = React.useMemo(() => {
+    const dates: Date[] = [];
+    (stages as any[]).forEach((s: any) => {
+      if (s.endDate) dates.push(new Date(s.endDate));
+      (s.topics || []).forEach((t: any) => {
+        if (t.endDate) dates.push(new Date(t.endDate));
+        (t.subtopics || []).forEach((st: any) => {
+          if (st.endDate) dates.push(new Date(st.endDate));
+        });
+      });
+    });
+    return dates.length > 0 ? max(dates) : addMonths(origin, 12);
+  }, [stages]);
+
+  const totalDaysNeeded = Math.max(
+    config.totalDays,
+    differenceInDays(maxEndDate, origin) + 60
+  );
+
+  const totalDays = totalDaysNeeded;
+  const colCount = Math.ceil(
+    viewMode === 'day' ? totalDays :
+    viewMode === 'week' ? totalDays / 7 :
+    viewMode === 'month' ? totalDays / 30 :
+    totalDays / 90
+  );
+
+  const columns = React.useMemo(
+    () => {
+      const step = viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : viewMode === 'month' ? 30 : 90;
+      return Array.from({ length: colCount }, (_, i) => addDays(origin, i * step));
+    },
+    [origin, colCount, viewMode]
+  );
+
+  const totalW = totalDays * config.dayW;
   const todayX = differenceInDays(new Date(), origin) * config.dayW;
 
   const weekendBars = React.useMemo(() => {
@@ -325,7 +359,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
             )}
             <div className="gantt-head">
               <div className="cell">Etapas e tópicos</div>
-              <div className="timeline-cols" style={{ gridTemplateColumns: `repeat(${config.colCount}, ${totalW / config.colCount}px)` }}>
+              <div className="timeline-cols" style={{ gridTemplateColumns: `repeat(${colCount}, ${totalW / colCount}px)` }}>
                 {columns.map((c, i) => (
                   <span key={i} style={{ 
                     fontSize: viewMode === 'day' ? '10px' : '11px',
@@ -347,7 +381,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                       <span className="chip accent xs" style={{ background: `color-mix(in srgb, ${stageColor} 12%, transparent)`, color: stageColor }}>E{si + 1}</span>
                       <span className="truncate b">{stage.name}</span>
                     </div>
-                    <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
+                    <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / colCount}px)` }}>
                       {hasBar && (
                         <div
                           className="gantt-bar stage-bar"
@@ -371,7 +405,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                             <span style={{ color: 'var(--text-3)', marginRight: 4, marginLeft: 16 }}>#</span>
                             <span className="truncate small b">{topic.name}</span>
                           </div>
-                          <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
+                          <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / colCount}px)` }}>
                               {topicHasBar && (
                                <div
                                  className="gantt-bar accent-bar"
@@ -395,7 +429,7 @@ export const GanttPage: React.FC<GanttPageProps> = ({ project }) => {
                                 <span style={{ color: isHighPrio ? 'var(--danger)' : 'var(--text-3)', marginRight: 4, marginLeft: 32 }}>{isHighPrio ? '!' : '-'}</span>
                                 <span className={`truncate xs ${isHighPrio ? 'b' : ''}`}>{subtopic.name}</span>
                               </div>
-                              <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / config.colCount}px)` }}>
+                              <div className="timeline-cell" style={{ position: 'relative', backgroundImage: `repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px ${totalW / colCount}px)` }}>
                                 {subHasBar && (
                                    <div
                                      className={`gantt-bar accent-light-bar ${isHighPrio ? 'high-prio' : ''}`}
