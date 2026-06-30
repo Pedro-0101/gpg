@@ -10,7 +10,7 @@ import { PrioChip } from '../../components/ui/PrioChip';
 import { Avatar, AvatarStack } from '../../components/ui/Avatar';
 import { formatDate, formatCurrency } from '../../lib/utils';
 import { calcSubtopicCost } from '../../lib/cost';
-import { ChevronLeft, X } from 'lucide-react';
+import { ChevronLeft, Trash2, X } from 'lucide-react';
 import type { SubtopicAttachment, SubtopicComment } from '../../types';
 
 const inp: React.CSSProperties = {
@@ -109,6 +109,14 @@ export const TaskDetailPage: React.FC = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments', subtopicId] }),
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: () => subtopicsApi.remove(projectId!, stageId!, topicId!, subtopicId!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['stages', projectId] });
+      navigate(`/projects/${projectId}/stages`);
+    },
+  });
+
   if (isLoading) return <div className="faint" style={{ padding: 32, textAlign: 'center' }}>Carregando...</div>;
   if (!task) return <div style={{ padding: 32, textAlign: 'center', color: 'var(--danger)' }}>Tarefa não encontrada.</div>;
 
@@ -154,9 +162,19 @@ export const TaskDetailPage: React.FC = () => {
             <svg className="sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
             <span className="crumb curr">{task.name}</span>
           </div>
-          <button className="btn ghost sm" onClick={() => navigate(-1)}>
-            <ChevronLeft size={14} /> Voltar
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="btn ghost sm" onClick={() => navigate(-1)}>
+              <ChevronLeft size={14} /> Voltar
+            </button>
+            <button
+              className="btn ghost sm"
+              style={{ color: 'var(--danger)' }}
+              disabled={deleteTaskMutation.isPending}
+              onClick={() => { if (confirm('Excluir esta tarefa?')) deleteTaskMutation.mutate(); }}
+            >
+              <Trash2 size={14} /> Excluir
+            </button>
+          </div>
         </div>
 
         <div className="row" style={{ gap: 8, marginBottom: 10 }}>
